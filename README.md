@@ -1,50 +1,39 @@
-# Welcome to your Expo app 👋
+# Marepe - Front-end
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+O **Marepe** é um aplicativo mobile desenvolvido com React Native e Expo, focado em facilitar a vida de quem frequenta a praia. Ele conecta banhistas às barracas e ambulantes locais.
 
-## Get started
+---
 
-1. Install dependencies
+## Repositórios do Ecossistema
+* **Front-end (Este repositório):** App Mobile em React Native/Expo.
+* **Back-end:**  [Repositório aqui](https://github.com/allanjfarias/marepe-backend)
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## Funcionalidades 
+- **Delivery na Areia:** Localização em tempo real para entrega no guarda-sol.
+- **Autoatendimento:** Cadastro e pedidos em barracas via QR Code.
+- **Cardápio Digital:** Visualização de itens e preços.
 
-   ```bash
-   npx expo start
-   ```
+## Tecnologias
+- React Native & Expo
+- TypeScript
+- Expo Router
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+## Como rodar o projeto
+1. Clone o projeto: 
 ```
+git clone https://github.com/HeloisaGS/marepe-frontend.git
+```
+2. Instale as dependências: 
+```
+npm install
+```
+3. Inicie o servidor: 
+```
+npx expo start
+```
+4. Escaneie o QR Code com o app **Expo Go** no celular.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+*Projeto em fase inicial de desenvolvimento para a disciplina de projeto de mundo 2.*
