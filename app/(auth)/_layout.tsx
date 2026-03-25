@@ -15,7 +15,7 @@ export default function AuthLayout() {
       <Stack.Screen name="recuperacao-senha/index" options={{ headerShown: false }} />
       <Stack.Screen name="recuperacao-senha/nova-senha" options={{ headerShown: false }} />
       {/* Rotas para token */}
-      <Stack.Screen name="verificar-token" options={{ title: 'Verificar Código' }} />
+      <Stack.Screen name="verificar-token" options={{ headerShown: false }} />
     </Stack>
   );
 }
