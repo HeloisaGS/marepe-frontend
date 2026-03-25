@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function CadastroCliente() {
+export default function CadastroAmbulante() {
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -11,6 +11,9 @@ export default function CadastroCliente() {
   const [verSenha, setVerSenha] = useState(false);
   const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
   const [exibirOpcoesEmail, setExibirOpcoesEmail] = useState(false);
+  const [foto, setFoto] = useState(null); // Vai ser opcional?
+  const [cpf, setCpf] = useState('');
+  const [telefone, setTelefone] = useState('');
 
   // E-mail mockado 
   const emailFixo = "exemplo@email.com";
@@ -18,10 +21,28 @@ export default function CadastroCliente() {
   // Lógica de validação simplificada
   const formularioValido =
     nome.trim().length > 3 &&
+    cpf.length === 14 && 
+    telefone.length >= 14 && 
     senha.length >= 8 &&
     senha === confirmarSenha &&
     aceitouTermos;
+  // Para ajustar telefone e CPF
+  const aplicarMascaraCPF = (valor: string) => {
+    return valor
+      .replace(/\D/g, '') // Remove tudo que não é número
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1'); // Limita o tamanho
+  };
 
+  const aplicarMascaraTelefone = (valor: string) => {
+    return valor
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
   return (
     <ScrollView 
       contentContainerStyle={styles.container} 
@@ -35,6 +56,11 @@ export default function CadastroCliente() {
         <View style={{ width: 28 }} />
       </View>
 
+      <View style={styles.containerFoto}>
+        <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+        </TouchableOpacity>
+      </View>
       <View style={{ zIndex: 10 }}> 
         <TouchableOpacity 
           style={styles.inputContainerFixo} 
@@ -87,7 +113,33 @@ export default function CadastroCliente() {
           
         </View>
       </View>
+      {/* Input CPF */}
+      <View style={styles.inputWrapper}>
+        <Text style={styles.labelFlutuante}>CPF</Text>
+        <View style={styles.inputComIcone}>
+          <TextInput
+            style={styles.textInputInterno}
+            placeholder="000.000.000-00"
+            keyboardType="numeric"
+            value={cpf}
+            onChangeText={(txt) => setCpf(aplicarMascaraCPF(txt))}
+          />
+        </View>
+      </View>
 
+      {/* Input Telefone */}
+      <View style={styles.inputWrapper}>
+        <Text style={styles.labelFlutuante}>Telefone</Text>
+        <View style={styles.inputComIcone}>
+          <TextInput
+            style={styles.textInputInterno}
+            placeholder="(00) 00000-0000"
+            keyboardType="phone-pad"
+            value={telefone}
+            onChangeText={(txt) => setTelefone(aplicarMascaraTelefone(txt))}
+          />
+        </View>
+      </View>
       
       {/* Input senha*/}
       <View style={styles.inputWrapper}>
@@ -284,6 +336,29 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 14,
     color: '#333',
+  },
+  // foto
+  containerFoto: {
+    alignItems: 'center',
+    marginBottom: 25,
+    marginTop: 10,
+  },
+  circuloFoto: {
+    width: 90,
+    height: 90,
+    borderRadius: 45, 
+    backgroundColor: '#f9f9f9',
+    borderWidth: 2,
+    borderColor: '#b2a199',
+    borderStyle: 'dashed', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  legendaFoto: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#b2a199',
+    fontWeight: '500',
   },
 
 });
