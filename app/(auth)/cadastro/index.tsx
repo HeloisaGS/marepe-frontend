@@ -26,7 +26,7 @@ export default function CadastroEscolha() {
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => router.push('/(auth)/cadastro/cadastro-ambulante')}
+        onPress={() => router.push('/(auth)/cadastro/cadastro-vendedor')}
       >
         <View style={styles.quadradoColorido}>
           <MaterialCommunityIcons name="walk" size={50} color="black" />
@@ -39,7 +39,7 @@ export default function CadastroEscolha() {
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => router.push('/(auth)/cadastro/cadastro-ambulante')}
+        onPress={() => router.push('/(auth)/cadastro/cadastro-vendedor')}
       >
         <View style={styles.quadradoColorido}>
           <MaterialCommunityIcons name="umbrella-beach" size={50} color="black" />
@@ -79,14 +79,14 @@ const styles = StyleSheet.create({
   },
   subtitulo: {
     fontSize: 20,
-    color: '#666',
+    color: '#000',
     marginBottom: 30,
   },
   card: {
     flexDirection: 'row', // Alinha ícone e texto lado a lado
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: '#b2a199',
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
