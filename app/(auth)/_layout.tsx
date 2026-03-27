@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 
 export default function AuthLayout() {
   return (
-    <Stack initialRouteName="login"> {/* AQUI MUDA AS TELAS QUE TÔ VENDO*/}
+    <Stack initialRouteName="index"> {/* AQUI MUDA AS TELAS QUE TÔ VENDO*/}
       {/* Rotas para telas de cadastro */}
       <Stack.Screen name="cadastro/index" options={{ headerShown: false }} />
       <Stack.Screen name="cadastro/cadastro-vendedor" options={{ headerShown: false }} />

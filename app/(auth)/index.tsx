@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, 
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../assets/images/logo.png';
-
+import { authService } from '../../services/authService';
+import { ActivityIndicator, Alert } from 'react-native';
 
 
 export default function TelaInicial() {
@@ -13,7 +14,39 @@ export default function TelaInicial() {
   };
   const emailValido = validarEmail(email);
 
+  // ligação com a api
+  const [carregando, setCarregando] = useState(false);
+  const handleContinuar = async () => {
+  if (!emailValido) return;
 
+  setCarregando(true);
+  try {
+    const response = await authService.checkEmail(email);
+    
+    console.log("Resposta da API:", response.data);
+
+    if (response.data.exists === true) {
+      // E-mail cadastrado -> LOGIN
+      router.push({
+        pathname: '/(auth)/login',
+        params: { emailDigitado: email }
+      });
+    } else {
+      // E-mail NÃO cadastrado -> CADASTRO
+      router.push({
+        pathname: '/(auth)/cadastro', 
+        params: { emailDigitado: email }
+      });
+    }
+
+  } catch (error: any) {
+    console.log("Erro de conexão/servidor:", error.message);
+    Alert.alert("Aviso", "O servidor está ligando. Tente novamente em 10 segundos.");
+  } finally {
+    setCarregando(false);
+  }
+};
+  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -58,11 +91,17 @@ export default function TelaInicial() {
           <Pressable
             style={({ pressed }) => [
               styles.botaoContinuar,
-              { backgroundColor: emailValido ? '#79FF79' : '#EAEAEA' }
+              { backgroundColor: emailValido ? '#79FF79' : '#EAEAEA' },
+              (pressed || carregando) && { opacity: 0.7 }
             ]}
-            disabled={!emailValido}
+            disabled={!emailValido || carregando}
+            onPress={handleContinuar} // Chamando a função nova
           >
-            <Text style={styles.textoBotaoContinuar}>Continuar</Text>
+            {carregando ? (
+              <ActivityIndicator color="#100101" />
+            ) : (
+              <Text style={styles.textoBotaoContinuar}>Continuar</Text>
+            )}
           </Pressable>
           {/* link */}
           <View style={styles.linksContainer}>
