@@ -155,7 +155,10 @@ export default function CadastroCliente() {
           console.log("Dados enviados:", { nome, senha });
           // Navegar para a próxima tela (ex: OTP)
           console.log("Navegando...");
-          router.push('/(auth)/verificar-token');
+          router.push({
+            pathname: '/(auth)/verificar-token',
+            params: { origem: 'cadastro' } 
+          });
         }}
       >
         <Text style={styles.textoBotao}>Continuar</Text>
