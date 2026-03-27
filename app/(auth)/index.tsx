@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../assets/images/logo.png';
+
+
+
 export default function TelaInicial() {
   const [email, setEmail] = useState('');
-  const validarEmail = (email) => {
+  const validarEmail = (email: string) => {
     return /\S+@\S+\.\S+/.test(email);
   };
   const emailValido = validarEmail(email);
+
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -25,7 +29,7 @@ export default function TelaInicial() {
           </View>
           {/* email */}
           <View style={styles.emailWrapper}>
-            <Text style={styles.labelEmail}>Digite um Email</Text>
+            <Text style={styles.labelEmail}>Digite um email</Text>
 
             <View style={styles.emailContainer}>
               <TextInput
@@ -62,10 +66,11 @@ export default function TelaInicial() {
           </Pressable>
           {/* link */}
           <View style={styles.linksContainer}>
-            <TouchableOpacity>
-              <Text style={styles.linkAzul}>Esqueci minha senha</Text>
+            <TouchableOpacity onPress={()=> router.push('/(auth)/recuperacao-senha')}>
+            <Text style={styles.linkAzul}>Esqueci minha senha</Text>
             </TouchableOpacity>
           </View>
+          
         </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
