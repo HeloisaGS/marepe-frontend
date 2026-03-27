@@ -17,35 +17,35 @@ export default function TelaInicial() {
   // ligação com a api
   const [carregando, setCarregando] = useState(false);
   const handleContinuar = async () => {
-  if (!emailValido) return;
+    if (!emailValido) return;
 
-  setCarregando(true);
-  try {
-    const response = await authService.checkEmail(email);
-    
-    console.log("Resposta da API:", response.data);
+    setCarregando(true);
+    try {
+      const response = await authService.checkEmail(email);
+      
+      console.log("Resposta da API:", response.data);
 
-    if (response.data.exists === true) {
-      // E-mail cadastrado -> LOGIN
-      router.push({
-        pathname: '/(auth)/login',
-        params: { emailDigitado: email }
-      });
-    } else {
-      // E-mail NÃO cadastrado -> CADASTRO
-      router.push({
-        pathname: '/(auth)/cadastro', 
-        params: { emailDigitado: email }
-      });
+      if (response.data.exists === true) {
+        // E-mail cadastrado -> LOGIN
+        router.push({
+          pathname: '/(auth)/login',
+          params: { emailDigitado: email }
+        });
+      } else {
+        // E-mail NÃO cadastrado -> CADASTRO
+        router.push({
+          pathname: '/(auth)/cadastro', 
+          params: { emailDigitado: email }
+        });
+      }
+
+    } catch (error: any) {
+      console.log("Erro de conexão/servidor:", error.message);
+      Alert.alert("Aviso", "O servidor está ligando. Tente novamente em 10 segundos.");
+    } finally {
+      setCarregando(false);
     }
-
-  } catch (error: any) {
-    console.log("Erro de conexão/servidor:", error.message);
-    Alert.alert("Aviso", "O servidor está ligando. Tente novamente em 10 segundos.");
-  } finally {
-    setCarregando(false);
-  }
-};
+  };
   
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>

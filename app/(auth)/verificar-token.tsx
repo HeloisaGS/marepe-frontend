@@ -3,12 +3,17 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvo
 import { router, useLocalSearchParams } from 'expo-router';
 import LogoMaré from '../../assets/images/logo.png'; 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { authService } from '../../services/authService'; 
+import { ActivityIndicator, Alert } from 'react-native';
+
 
 export default function Token() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
   const inputs = useRef<(TextInput | null)[]>([]);
   const [erro, setErro] = useState('');
+  const { origem, email } = useLocalSearchParams(); // Pegue o email aqui
+  const [carregando, setCarregando] = useState(false);
 
   // Lógica do cronômetro
   useEffect(() => {
@@ -42,41 +47,53 @@ export default function Token() {
 
   const isComplete = code.every(digit => digit !== '');
 
-  const handleResend = () => {
-    if (timer === 0) {
-      setTimer(30);
-      // Aqui você chamaria sua API de reenvio
-      console.log("Código reenviado!");
-    }
-  };
-  
-  // Para saber de onde vem
-  const { origem } = useLocalSearchParams();
-
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (isComplete) {
       const tokenDigitado = code.join('');
-      const TOKEN_CORRETO = "123456"; //Mock do token alterar para o da API
+      setCarregando(true);
       setErro('');
-      
-      if (tokenDigitado === TOKEN_CORRETO) {
-      console.log("Código correto! Navegando...");
-        if (origem === 'recuperacao') {
-          router.push('/(auth)/recuperacao-senha/nova-senha');
-        } else if (origem === 'cadastro') {
-          router.push('/(auth)/sucesso'); // Tela temporária
-          // router.push('/'); 
-        } else {
-          router.push('/'); 
+
+      try {
+        const emailString = Array.isArray(email) ? email[0] : email;
+        const response = await authService.verifyEmail(emailString, tokenDigitado);
+
+        if (response.status === 200 || response.status === 201) {
+          // SUCESSO!
+          if (origem === 'recuperacao') {
+            router.push('/(auth)/recuperacao-senha/nova-senha');
+          } else {
+            // Cadastro concluído com sucesso
+            router.push('/(auth)/sucesso'); 
+          }
         }
-      } else {
-        console.log("Código incorreto!");
-        setErro('Código inválido. Verifique se digitou corretamente ou peça um novo código.');
+      } catch (error: any) {
+        console.log("ERRO NO TOKEN:", error.response?.data);
+        
+        // 2. Ajuste aqui: O FastAPI usa 'detail', não 'message'
+        const msg = error.response?.data?.detail || 'Código inválido ou expirado.';
+        setErro(typeof msg === 'string' ? msg : "Erro na validação do código");
+        
+        // Opcional: limpar o código se der erro
         setCode(['', '', '', '', '', '']);
         inputs.current[0]?.focus();
+      } finally {
+        setCarregando(false);
       }
     }
   };
+
+const handleResend = async () => {
+  if (timer === 0) {
+    try {
+      const emailString = Array.isArray(email) ? email[0] : email;
+      await authService.resendToken(emailString);
+      setTimer(60); 
+      Alert.alert("Sucesso", "Um novo código foi enviado para seu e-mail.");
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível reenviar o código agora.");
+    }
+  }
+};
 
   return (
     <KeyboardAvoidingView 
@@ -119,16 +136,20 @@ export default function Token() {
         </View>
 
         <TouchableOpacity
-          disabled={!isComplete}
+          disabled={!isComplete || carregando}
           style={[
             styles.button, 
             { backgroundColor: isComplete ? '#2ecc71' : '#E0E0E0' }
           ]}
           onPress={handleVerify}
         >
-          <Text style={[styles.buttonText, { color: isComplete ? '#fff' : '#A0A0A0' }]}>
-            Verificar
-          </Text>
+          {carregando ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={[styles.buttonText, { color: isComplete ? '#fff' : '#A0A0A0' }]}>
+              Verificar
+            </Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>

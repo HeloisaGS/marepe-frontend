@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { authService } from '../../../services/authService';
+
 
 export default function CadastroCliente() {
   const [nome, setNome] = useState('');
@@ -11,8 +13,11 @@ export default function CadastroCliente() {
   const [verSenha, setVerSenha] = useState(false);
   const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
   const [exibirOpcoesEmail, setExibirOpcoesEmail] = useState(false);
-
+  const [carregando, setCarregando] = useState(false);
+  
   // E-mail mockado 
+  const { emailDigitado, role } = useLocalSearchParams()
+  const emailExibicao = Array.isArray(emailDigitado) ? emailDigitado[0] : (emailDigitado);
   const emailFixo = "exemplo@email.com";
 
   // Lógica de validação simplificada
@@ -21,6 +26,41 @@ export default function CadastroCliente() {
     senha.length >= 8 &&
     senha === confirmarSenha &&
     aceitouTermos;
+
+  // Registro no banco
+  const handleRegistro = async () => {
+  setCarregando(true);
+  console.log("PAYLOAD QUE SERÁ ENVIADO:", {
+    nome: nome,
+    email: emailExibicao,
+    password: senha,
+    role: role || 'CLIENTE'
+  });
+  try {
+    // Montamos o objeto exatamente como a API espera
+    const payload = {
+      nome: nome,
+      email: emailExibicao,
+      password: senha,
+      role: role || 'cliente' // 'role' veio do useLocalSearchParams
+    };
+
+    // Chamada para a função que você acabou de criar
+    const response = await authService.register(payload);
+    if (response.status === 201 || response.status === 200) {
+      router.push({
+        pathname: '/(auth)/verificar-token',
+        params: { email: emailExibicao, origem: 'cadastro' } 
+      });
+    }
+  } catch (error:any) {
+    const mensagem = error.response?.data?.message || "Erro de conexão";
+    Alert.alert("Erro", mensagem);
+    console.log("ERRO AO REGISTRAR:", error.response?.data || error.message);
+  } finally {
+    setCarregando(false);
+  }
+};
 
   return (
     <ScrollView 
@@ -43,7 +83,7 @@ export default function CadastroCliente() {
         >
           <TextInput
             style={styles.inputFixo}
-            value={emailFixo}
+            value={emailExibicao}
             editable={false}
             pointerEvents="none"
           />
@@ -151,15 +191,7 @@ export default function CadastroCliente() {
           { backgroundColor: formularioValido ? '#2ecc71' : '#ccc' }
         ]}
         disabled={!formularioValido}
-        onPress={() => {
-          console.log("Dados enviados:", { nome, senha });
-          // Navegar para a próxima tela (ex: OTP)
-          console.log("Navegando...");
-          router.push({
-            pathname: '/(auth)/verificar-token',
-            params: { origem: 'cadastro' } 
-          });
-        }}
+        onPress={handleRegistro}
       >
         <Text style={styles.textoBotao}>Continuar</Text>
       </TouchableOpacity>
