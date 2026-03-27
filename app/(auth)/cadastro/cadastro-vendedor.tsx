@@ -43,6 +43,7 @@ export default function CadastroAmbulante() {
       .replace(/(\d{5})(\d)/, '$1-$2')
       .replace(/(-\d{4})\d+?$/, '$1');
   };
+  
   return (
     <ScrollView 
       contentContainerStyle={styles.container} 
@@ -207,7 +208,10 @@ export default function CadastroAmbulante() {
           console.log("Dados enviados:", { nome, senha });
           // Navegar para a próxima tela (ex: OTP)
           console.log("Navegando...");
-          router.push('/(auth)/verificar-token');
+          router.push({
+            pathname: '/(auth)/verificar-token',
+            params: { origem: 'cadastro' } 
+          });
         }}
       >
         <Text style={styles.textoBotao}>Continuar</Text>
