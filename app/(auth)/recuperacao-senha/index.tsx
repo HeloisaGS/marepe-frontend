@@ -41,12 +41,22 @@ export default function RecuperacaoSenha() {
           </View>
           {/* btn  */}
           <Pressable
+            disabled={!emailValido}
+            onPress={() => {
+              router.push({
+                pathname: '/(auth)/verificar-token', // Nome da sua pasta/arquivo do OTP
+                params: { origem: 'recuperacao' } 
+              });
+            }}
             style={({ pressed }) => [
               styles.botaoEnviar,
-              pressed && { backgroundColor: '#4CAF50' }
+              { backgroundColor: emailValido ? '#79FF79' : '#EAEAEA' },
+              pressed && emailValido && { opacity: 0.7 }
             ]}
           >
-            <Text style={styles.textoBotaoContinuar}>Enviar Código de Recuperação</Text>
+            <Text style={[styles.textoBotaoContinuar, { color: emailValido ? '#100101' : '#999' }]}>
+              Enviar Código de Recuperação
+            </Text>
           </Pressable>
 
 

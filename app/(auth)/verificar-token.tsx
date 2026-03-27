@@ -64,7 +64,7 @@ export default function Token() {
         if (origem === 'recuperacao') {
           router.push('/(auth)/recuperacao-senha/nova-senha');
         } else if (origem === 'cadastro') {
-          router.push('/(auth)/cadastro/sucesso-cadastro'); // Tela temporária
+          router.push('/(auth)/sucesso'); // Tela temporária
           // router.push('/'); 
         } else {
           router.push('/'); 

@@ -8,7 +8,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-
+  const senhaValida = senha.length >= 8;
 
   return (
     <KeyboardAvoidingView 
@@ -61,21 +61,29 @@ export default function Login() {
 
         {/* btn continuar */}
         <Pressable 
+          disabled={!senhaValida} 
+          onPress={() => router.push('/(auth)/sucesso')}
           style={({ pressed }) => [
             styles.botaoContinuar,
-            pressed && { backgroundColor: '#4CAF50' }
+            { backgroundColor: senhaValida ? '#79FF79' : '#EAEAEA' },
+            pressed && senhaValida && { opacity: 0.7 }
           ]}
         >
-          <Text style={styles.textoBotaoContinuar}>Continuar</Text>
+          <Text style={[
+            styles.textoBotaoContinuar, 
+            { color: senhaValida ? '#100101' : '#999' }
+          ]}>
+            Continuar
+          </Text>
         </Pressable>
 
         {/* link */}
         <View style={styles.linksContainer}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(auth)/recuperacao-senha')}>
             <Text style={styles.linkAzul}>Esqueci minha senha</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/(auth)')}>
             <Text style={styles.linkLaranja}>Alterar e-mail.</Text>
           </TouchableOpacity>
         </View>

@@ -6,7 +6,11 @@ import LogoMaré from '../../../assets/images/logo.png';
 
 export default function DefinirSenha() {
   const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const senhasConferem = senha === confirmarSenha && senha.length >= 8;
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -50,14 +54,14 @@ export default function DefinirSenha() {
               <View style={styles.senhaContainer}>
                 <TextInput
                   style={styles.inputSenha}
-                  secureTextEntry={!mostrarSenha}
-                  value={senha}
-                  onChangeText={setSenha}
+                  secureTextEntry={!mostrarConfirmarSenha}
+                  value={confirmarSenha}
+                  onChangeText={setConfirmarSenha}
 
                 />
-                <TouchableOpacity onPress={() => setMostrarSenha(!mostrarSenha)}>
+                <TouchableOpacity onPress={() => setMostrarConfirmarSenha(!mostrarSenha)}>
                   <MaterialCommunityIcons
-                    name={mostrarSenha ? "eye" : "eye-off"}
+                    name={mostrarConfirmarSenha ? "eye" : "eye-off"}
                     size={24}
                     color="#000"
                   />
@@ -67,12 +71,20 @@ export default function DefinirSenha() {
 
             {/* btn continuar */}
             <Pressable
+              disabled={!senhasConferem}
+              onPress={() => router.push('/(auth)/sucesso')}
               style={({ pressed }) => [
                 styles.botaoContinuar,
-                pressed && { backgroundColor: '#79FF79' }
+                { backgroundColor: senhasConferem ? '#79FF79' : '#EAEAEA' },
+                pressed && senhasConferem && { opacity: 0.7 }
               ]}
             >
-              <Text style={styles.textoBotaoContinuar}>Continuar</Text>
+              <Text style={[
+                styles.textoBotaoContinuar, 
+                { color: senhasConferem ? '#100101' : '#999' }
+              ]}>
+                Continuar
+              </Text>
             </Pressable>
 
 
