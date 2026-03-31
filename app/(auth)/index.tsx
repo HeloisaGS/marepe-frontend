@@ -17,36 +17,36 @@ export default function TelaInicial() {
   // ligação com a api
   const [carregando, setCarregando] = useState(false);
   const handleContinuar = async () => {
-  if (!emailValido) return;
+    if (!emailValido) return;
 
-  setCarregando(true);
-  try {
-    const response = await authService.checkEmail(email);
-    
-    console.log("Resposta da API:", response.data);
+    setCarregando(true);
+    try {
+      const response = await authService.checkEmail(email);
 
-    if (response.data.exists === true) {
-      // E-mail cadastrado -> LOGIN
-      router.push({
-        pathname: '/(auth)/login',
-        params: { emailDigitado: email }
-      });
-    } else {
-      // E-mail NÃO cadastrado -> CADASTRO
-      router.push({
-        pathname: '/(auth)/cadastro', 
-        params: { emailDigitado: email }
-      });
+      console.log("Resposta da API:", response.data);
+
+      if (response.data.exists === true) {
+        // E-mail cadastrado -> LOGIN
+        router.push({
+          pathname: '/(auth)/login',
+          params: { emailDigitado: email }
+        });
+      } else {
+        // E-mail NÃO cadastrado -> CADASTRO
+        router.push({
+          pathname: '/(auth)/cadastro',
+          params: { emailDigitado: email }
+        });
+      }
+
+    } catch (error: any) {
+      console.log("Erro de conexão/servidor:", error.message);
+      Alert.alert("Aviso", "O servidor está ligando. Tente novamente em 10 segundos.");
+    } finally {
+      setCarregando(false);
     }
+  };
 
-  } catch (error: any) {
-    console.log("Erro de conexão/servidor:", error.message);
-    Alert.alert("Aviso", "O servidor está ligando. Tente novamente em 10 segundos.");
-  } finally {
-    setCarregando(false);
-  }
-};
-  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -105,11 +105,16 @@ export default function TelaInicial() {
           </Pressable>
           {/* link */}
           <View style={styles.linksContainer}>
-            <TouchableOpacity onPress={()=> router.push('/(auth)/recuperacao-senha')}>
-            <Text style={styles.linkAzul}>Esqueci minha senha</Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/recuperacao-senha')}>
+              <Text style={styles.linkAzul}>Esqueci minha senha</Text>
             </TouchableOpacity>
           </View>
-          
+          {/* <TouchableOpacity
+            onPress={() => router.push('/(auth)/recuperacao-senha/nova-senha')} // trocar a tela TIRAR
+            style={{ marginTop: 20 }}
+          >
+            <Text style={{ color: 'red' }}>trocar tela</Text>
+          </TouchableOpacity> */}
         </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
