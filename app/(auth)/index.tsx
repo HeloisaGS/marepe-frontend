@@ -109,12 +109,7 @@ export default function TelaInicial() {
               <Text style={styles.linkAzul}>Esqueci minha senha</Text>
             </TouchableOpacity>
           </View>
-          {/* <TouchableOpacity
-            onPress={() => router.push('/(auth)/recuperacao-senha/nova-senha')} // trocar a tela TIRAR
-            style={{ marginTop: 20 }}
-          >
-            <Text style={{ color: 'red' }}>trocar tela</Text>
-          </TouchableOpacity> */}
+          
         </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
