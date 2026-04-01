@@ -20,11 +20,15 @@ export default function CadastroCliente() {
   const emailExibicao = Array.isArray(emailDigitado) ? emailDigitado[0] : (emailDigitado);
   const emailFixo = "exemplo@email.com";
 
+  const senhaCurta = senha.length > 0 && senha.length < 8;
+  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
+  const nomeCurto = nome.trim().length > 0 && nome.trim().length <= 3;
+
   // Lógica de validação simplificada
   const formularioValido =
     nome.trim().length > 3 &&
     senha.length >= 8 &&
-    senha === confirmarSenha &&
+    !senhasDiferentes &&
     aceitouTermos;
 
   // Registro no banco
@@ -117,8 +121,11 @@ export default function CadastroCliente() {
       
       {/* Input nome*/}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Nome Completo</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, nomeCurto && { color: '#e74c3c' }]}>Nome Completo</Text>
+        <View style={[
+          styles.inputComIcone, 
+          nomeCurto && { borderColor: '#e74c3c' }
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             value={nome}
@@ -126,13 +133,19 @@ export default function CadastroCliente() {
           />
           
         </View>
+        {nomeCurto && (
+          <Text style={styles.textoErro}>O nome deve ter mais de 3 caracteres.</Text>
+        )}
       </View>
 
       
       {/* Input senha*/}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Senha</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, senhaCurta && { color: '#e74c3c' }]}>Senha</Text>
+        <View style={[
+          styles.inputComIcone, 
+          senhaCurta && { borderColor: '#e74c3c' } 
+          ]}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verSenha} 
@@ -144,17 +157,21 @@ export default function CadastroCliente() {
             <MaterialCommunityIcons 
               name={verSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color="#333" 
+              color={senhaCurta ? "#e74c3c" : "#333"}
             />
           </TouchableOpacity>
         </View>
+        {senhaCurta && <Text style={styles.textoErro}>A senha deve ter pelo menos 8 caracteres.</Text>}
       </View>
 
 
       {/* Input confirmar senha */}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Confirmar Nova Senha</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, senhasDiferentes && { color: '#e74c3c' }]}>Confirmar Nova Senha</Text>
+        <View style={[
+          styles.inputComIcone, 
+          senhasDiferentes && { borderColor: '#e74c3c' } 
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verConfirmarSenha} 
@@ -166,10 +183,11 @@ export default function CadastroCliente() {
             <MaterialCommunityIcons 
               name={verConfirmarSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color="#333" 
+              color={senhasDiferentes ? "#e74c3c" : "#333"} 
             />
           </TouchableOpacity>
         </View>
+        {senhasDiferentes && <Text style={styles.textoErro}>As senhas não coincidem.</Text>}
       </View>
 
       <TouchableOpacity
@@ -329,5 +347,16 @@ const styles = StyleSheet.create({
   linkRoxo: {
     color: '#A369F9',
   },
+  // Erros no campo de senha
+  textoErro: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+  labelErro: {
+    color: '#e74c3c',
+  }
 
 });
