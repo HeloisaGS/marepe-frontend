@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { authService } from '../../../services/authService';
 
-
-export default function CadastroCliente() {
+export default function CadastroAmbulante() {
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -13,59 +11,39 @@ export default function CadastroCliente() {
   const [verSenha, setVerSenha] = useState(false);
   const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
   const [exibirOpcoesEmail, setExibirOpcoesEmail] = useState(false);
-  const [carregando, setCarregando] = useState(false);
-  
-  // E-mail mockado 
-  const { emailDigitado, role } = useLocalSearchParams()
-  const emailExibicao = Array.isArray(emailDigitado) ? emailDigitado[0] : (emailDigitado);
-  const emailFixo = "exemplo@email.com";
+  const [foto, setFoto] = useState(null); // Vai ser opcional?
+  const [cpf, setCpf] = useState('');
+  const [telefone, setTelefone] = useState('');
 
-  const senhaCurta = senha.length > 0 && senha.length < 8;
-  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
-  const nomeCurto = nome.trim().length > 0 && nome.trim().length <= 3;
+  // E-mail mockado 
+  const emailFixo = "exemplo@email.com";
 
   // Lógica de validação simplificada
   const formularioValido =
     nome.trim().length > 3 &&
+    cpf.length === 14 && 
+    telefone.length >= 14 && 
     senha.length >= 8 &&
-    !senhasDiferentes &&
+    senha === confirmarSenha &&
     aceitouTermos;
+  // Para ajustar telefone e CPF
+  const aplicarMascaraCPF = (valor: string) => {
+    return valor
+      .replace(/\D/g, '') // Remove tudo que não é número
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1'); // Limita o tamanho
+  };
 
-  // Registro no banco
-  const handleRegistro = async () => {
-  setCarregando(true);
-  console.log("PAYLOAD QUE SERÁ ENVIADO:", {
-    nome: nome,
-    email: emailExibicao,
-    password: senha,
-    role: role || 'CLIENTE'
-  });
-  try {
-    // Montamos o objeto exatamente como a API espera
-    const payload = {
-      nome: nome,
-      email: emailExibicao,
-      password: senha,
-      role: role || 'cliente' // 'role' veio do useLocalSearchParams
-    };
-
-    // Chamada para a função que você acabou de criar
-    const response = await authService.register(payload);
-    if (response.status === 201 || response.status === 200) {
-      router.push({
-        pathname: '/(auth)/verificar-token',
-        params: { email: emailExibicao, origem: 'cadastro' } 
-      });
-    }
-  } catch (error:any) {
-    const mensagem = error.response?.data?.message || "Erro de conexão";
-    Alert.alert("Erro", mensagem);
-    console.log("ERRO AO REGISTRAR:", error.response?.data || error.message);
-  } finally {
-    setCarregando(false);
-  }
-};
-
+  const aplicarMascaraTelefone = (valor: string) => {
+    return valor
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+  
   return (
     <ScrollView 
       contentContainerStyle={styles.container} 
@@ -79,6 +57,11 @@ export default function CadastroCliente() {
         <View style={{ width: 28 }} />
       </View>
 
+      <View style={styles.containerFoto}>
+        <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+        </TouchableOpacity>
+      </View>
       <View style={{ zIndex: 10 }}> 
         <TouchableOpacity 
           style={styles.inputContainerFixo} 
@@ -87,7 +70,7 @@ export default function CadastroCliente() {
         >
           <TextInput
             style={styles.inputFixo}
-            value={emailExibicao}
+            value={emailFixo}
             editable={false}
             pointerEvents="none"
           />
@@ -121,11 +104,8 @@ export default function CadastroCliente() {
       
       {/* Input nome*/}
       <View style={styles.inputWrapper}>
-        <Text style={[styles.labelFlutuante, nomeCurto && { color: '#e74c3c' }]}>Nome Completo</Text>
-        <View style={[
-          styles.inputComIcone, 
-          nomeCurto && { borderColor: '#e74c3c' }
-        ]}>
+        <Text style={styles.labelFlutuante}>Nome Completo</Text>
+        <View style={styles.inputComIcone}>
           <TextInput
             style={styles.textInputInterno}
             value={nome}
@@ -133,19 +113,39 @@ export default function CadastroCliente() {
           />
           
         </View>
-        {nomeCurto && (
-          <Text style={styles.textoErro}>O nome deve ter mais de 3 caracteres.</Text>
-        )}
+      </View>
+      {/* Input CPF */}
+      <View style={styles.inputWrapper}>
+        <Text style={styles.labelFlutuante}>CPF</Text>
+        <View style={styles.inputComIcone}>
+          <TextInput
+            style={styles.textInputInterno}
+            placeholder="000.000.000-00"
+            keyboardType="numeric"
+            value={cpf}
+            onChangeText={(txt) => setCpf(aplicarMascaraCPF(txt))}
+          />
+        </View>
       </View>
 
+      {/* Input Telefone */}
+      <View style={styles.inputWrapper}>
+        <Text style={styles.labelFlutuante}>Telefone</Text>
+        <View style={styles.inputComIcone}>
+          <TextInput
+            style={styles.textInputInterno}
+            placeholder="(00) 00000-0000"
+            keyboardType="phone-pad"
+            value={telefone}
+            onChangeText={(txt) => setTelefone(aplicarMascaraTelefone(txt))}
+          />
+        </View>
+      </View>
       
       {/* Input senha*/}
       <View style={styles.inputWrapper}>
-        <Text style={[styles.labelFlutuante, senhaCurta && { color: '#e74c3c' }]}>Senha</Text>
-        <View style={[
-          styles.inputComIcone, 
-          senhaCurta && { borderColor: '#e74c3c' } 
-          ]}>
+        <Text style={styles.labelFlutuante}>Senha</Text>
+        <View style={styles.inputComIcone}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verSenha} 
@@ -157,21 +157,17 @@ export default function CadastroCliente() {
             <MaterialCommunityIcons 
               name={verSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color={senhaCurta ? "#e74c3c" : "#333"}
+              color="#333" 
             />
           </TouchableOpacity>
         </View>
-        {senhaCurta && <Text style={styles.textoErro}>A senha deve ter pelo menos 8 caracteres.</Text>}
       </View>
 
 
       {/* Input confirmar senha */}
       <View style={styles.inputWrapper}>
-        <Text style={[styles.labelFlutuante, senhasDiferentes && { color: '#e74c3c' }]}>Confirmar Nova Senha</Text>
-        <View style={[
-          styles.inputComIcone, 
-          senhasDiferentes && { borderColor: '#e74c3c' } 
-        ]}>
+        <Text style={styles.labelFlutuante}>Confirmar Nova Senha</Text>
+        <View style={styles.inputComIcone}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verConfirmarSenha} 
@@ -183,11 +179,10 @@ export default function CadastroCliente() {
             <MaterialCommunityIcons 
               name={verConfirmarSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color={senhasDiferentes ? "#e74c3c" : "#333"} 
+              color="#333" 
             />
           </TouchableOpacity>
         </View>
-        {senhasDiferentes && <Text style={styles.textoErro}>As senhas não coincidem.</Text>}
       </View>
 
       <TouchableOpacity
@@ -202,11 +197,12 @@ export default function CadastroCliente() {
         />
         <Text style={styles.textoCheckbox}>Li e aceito os 
             <Text
-              style={styles.linkRoxo}
-              onPress={()=>router.push('/(auth)/termos')}
+                style={styles.linkRoxo}
+                onPress={()=>router.push('/(auth)/termos')}
             > Termos de uso
             </Text>
         </Text>
+
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -215,7 +211,15 @@ export default function CadastroCliente() {
           { backgroundColor: formularioValido ? '#2ecc71' : '#ccc' }
         ]}
         disabled={!formularioValido}
-        onPress={handleRegistro}
+        onPress={() => {
+          console.log("Dados enviados:", { nome, senha });
+          // Navegar para a próxima tela (ex: OTP)
+          console.log("Navegando...");
+          router.push({
+            pathname: '/(auth)/verificar-token',
+            params: { origem: 'cadastro' } 
+          });
+        }}
       >
         <Text style={styles.textoBotao}>Continuar</Text>
       </TouchableOpacity>
@@ -344,19 +348,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+  // foto
+  containerFoto: {
+    alignItems: 'center',
+    marginBottom: 25,
+    marginTop: 10,
+  },
+  circuloFoto: {
+    width: 90,
+    height: 90,
+    borderRadius: 45, 
+    backgroundColor: '#f9f9f9',
+    borderWidth: 2,
+    borderColor: '#b2a199',
+    borderStyle: 'dashed', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  legendaFoto: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#b2a199',
+    fontWeight: '500',
+  },
   linkRoxo: {
     color: '#A369F9',
   },
-  // Erros no campo de senha
-  textoErro: {
-    color: '#e74c3c',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-  labelErro: {
-    color: '#e74c3c',
-  }
 
 });

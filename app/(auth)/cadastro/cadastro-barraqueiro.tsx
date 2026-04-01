@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function CadastroAmbulante() {
+export default function CadastroBarraqueiro() {
   const [nome, setNome] = useState('');
+  const [barraca, setBarraca] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [aceitouTermos, setAceitouTermos] = useState(false);
@@ -21,6 +22,7 @@ export default function CadastroAmbulante() {
   // Lógica de validação simplificada
   const formularioValido =
     nome.trim().length > 3 &&
+    barraca.trim().length > 3 &&
     cpf.length === 14 && 
     telefone.length >= 14 && 
     senha.length >= 8 &&
@@ -114,6 +116,18 @@ export default function CadastroAmbulante() {
           
         </View>
       </View>
+      {/* Input nome da barraca*/}
+      <View style={styles.inputWrapper}>
+        <Text style={styles.labelFlutuante}>Nome da Barraca</Text>
+        <View style={styles.inputComIcone}>
+          <TextInput
+            style={styles.textInputInterno}
+            value={barraca}
+            onChangeText={setBarraca}
+          />
+          
+        </View>
+      </View>
       {/* Input CPF */}
       <View style={styles.inputWrapper}>
         <Text style={styles.labelFlutuante}>CPF</Text>
@@ -195,7 +209,13 @@ export default function CadastroAmbulante() {
           size={24}
           color={aceitouTermos ? "#6750A4" : "#666"}
         />
-        <Text style={styles.textoCheckbox}>Li e aceito a política de privacidade</Text>
+        <Text style={styles.textoCheckbox}>Li e aceito os 
+            <Text
+                style={styles.linkRoxo}
+                onPress={()=>router.push('/(auth)/termos')}
+            > Termos de uso
+            </Text>
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -363,6 +383,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#b2a199',
     fontWeight: '500',
+  },
+  linkRoxo: {
+    color: '#A369F9',
   },
 
 });

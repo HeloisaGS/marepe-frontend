@@ -32,7 +32,7 @@ export default function CadastroEscolha() {
       <TouchableOpacity 
         style={styles.card}
         onPress={() => router.push({
-          pathname: '/(auth)/cadastro/cadastro-vendedor',
+          pathname: '/(auth)/cadastro/cadastro-ambulante',
           params: { emailDigitado: emailDigitado, role: 'AMBULANTE' }
         })}
       >
@@ -48,7 +48,7 @@ export default function CadastroEscolha() {
       <TouchableOpacity 
         style={styles.card}
         onPress={() => router.push({
-          pathname: '/(auth)/cadastro/cadastro-vendedor',
+          pathname: '/(auth)/cadastro/cadastro-barraqueiro',
           params: { emailDigitado: emailDigitado, role: 'BARRAQUEIRO' }
         })}
       >

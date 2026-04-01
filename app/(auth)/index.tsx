@@ -85,7 +85,12 @@ export default function TelaInicial() {
           </View>
           {/* Termos de Uso */}
           <Text style={styles.textoTermos}>
-            Ao continuar, você concorda com as <Text style={styles.linkRoxo}>Condições de Uso</Text>
+            Ao continuar, você concorda com as  
+            <Text 
+              style={styles.linkRoxo}
+              onPress={() => router.push('/(auth)/termos')}
+            > Termos de Uso</Text>
+
           </Text>
           {/* btn continuar */}
           <Pressable
