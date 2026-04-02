@@ -110,8 +110,8 @@ export default function TelaInicial() {
           </Pressable>
           {/* link */}
           <View style={styles.linksContainer}>
-            <TouchableOpacity onPress={()=> router.push('/(auth)/recuperacao-senha')}>
-            <Text style={styles.linkAzul}>Esqueci minha senha</Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/recuperacao-senha')}>
+              <Text style={styles.linkAzul}>Esqueci minha senha</Text>
             </TouchableOpacity>
           </View>
           
