@@ -22,7 +22,7 @@ export default function TelaInicial() {
     setCarregando(true);
     try {
       const response = await authService.checkEmail(email);
-
+      
       console.log("Resposta da API:", response.data);
 
       if (response.data.exists === true) {
@@ -34,7 +34,7 @@ export default function TelaInicial() {
       } else {
         // E-mail NÃO cadastrado -> CADASTRO
         router.push({
-          pathname: '/(auth)/cadastro',
+          pathname: '/(auth)/cadastro', 
           params: { emailDigitado: email }
         });
       }
@@ -46,7 +46,7 @@ export default function TelaInicial() {
       setCarregando(false);
     }
   };
-
+  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -85,7 +85,12 @@ export default function TelaInicial() {
           </View>
           {/* Termos de Uso */}
           <Text style={styles.textoTermos}>
-            Ao continuar, você concorda com as <Text style={styles.linkRoxo}>Condições de Uso</Text>
+            Ao continuar, você concorda com as  
+            <Text 
+              style={styles.linkRoxo}
+              onPress={() => router.push('/(auth)/termos')}
+            > Termos de Uso</Text>
+
           </Text>
           {/* btn continuar */}
           <Pressable

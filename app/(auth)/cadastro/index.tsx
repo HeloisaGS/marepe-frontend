@@ -1,9 +1,10 @@
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../../assets/images/logo.png'; 
 
 export default function CadastroEscolha() {
+  const { emailDigitado } = useLocalSearchParams();
   return (
     <View style={styles.container}>
       {/* Inicío */}
@@ -13,7 +14,11 @@ export default function CadastroEscolha() {
       {/* Cards*/}
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => router.push('/(auth)/cadastro/cadastro-cliente')}
+        onPress={() => router.push({
+          pathname: '/(auth)/cadastro/cadastro-cliente',
+          params: { emailDigitado: emailDigitado, role: 'CLIENTE' }
+        })}
+        
       >
         <View style={styles.quadradoColorido}>
           <MaterialCommunityIcons name="account-circle" size={50} color="black" />
@@ -26,7 +31,10 @@ export default function CadastroEscolha() {
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => router.push('/(auth)/cadastro/cadastro-vendedor')}
+        onPress={() => router.push({
+          pathname: '/(auth)/cadastro/cadastro-ambulante',
+          params: { emailDigitado: emailDigitado, role: 'AMBULANTE' }
+        })}
       >
         <View style={styles.quadradoColorido}>
           <MaterialCommunityIcons name="walk" size={50} color="black" />
@@ -39,7 +47,10 @@ export default function CadastroEscolha() {
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => router.push('/(auth)/cadastro/cadastro-vendedor')}
+        onPress={() => router.push({
+          pathname: '/(auth)/cadastro/cadastro-barraqueiro',
+          params: { emailDigitado: emailDigitado, role: 'BARRAQUEIRO' }
+        })}
       >
         <View style={styles.quadradoColorido}>
           <MaterialCommunityIcons name="umbrella-beach" size={50} color="black" />
