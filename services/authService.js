@@ -14,10 +14,13 @@ export const authService = {
     });
   },
 
-  // 3. REENVIO DE TOKEN (Geralmente usa a mesma lógica de check ou forgot)
-  // Se o seu backend tiver uma rota específica '/auth/resend-token', mantenha assim:
-  resendToken: async (email) => {
-    return api.post('/auth/resend-token', { email });
+  // 3. REENVIO DE TOKEN 
+  // Separação entre envio por signup e por senha esquecida
+  resendSignup: async (email) => {
+    return api.post('/auth/resend-signup', { email });
+  },
+  resendForgotPassword: async (email) => {
+    return api.post('/auth/forgot-password', { email });
   },
 
   // 4. LOGIN
