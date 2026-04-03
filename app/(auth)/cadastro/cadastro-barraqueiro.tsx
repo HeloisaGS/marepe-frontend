@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { authService } from '../../../services/authService';
 
 export default function CadastroBarraqueiro() {
   const [nome, setNome] = useState('');
@@ -15,9 +16,11 @@ export default function CadastroBarraqueiro() {
   const [foto, setFoto] = useState(null); // Vai ser opcional?
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  // E-mail mockado 
-  const emailFixo = "exemplo@email.com";
+  // Email digitado na página anterior
+    const { emailDigitado } = useLocalSearchParams();
+    const emailExibicao = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado;
 
   // Lógica de validação simplificada
   const formularioValido =
@@ -46,6 +49,46 @@ export default function CadastroBarraqueiro() {
       .replace(/(-\d{4})\d+?$/, '$1');
   };
   
+  // Erros nos campos
+  const nomeCurto = nome.trim().length > 0 && nome.trim().length <= 3;
+  const nomeBarracaCurto = barraca.trim().length > 0 && nome.trim().length <= 3;
+  const cpfInvalido = cpf.length > 0 && cpf.length < 14;
+  const telefoneInvalido = telefone.length > 0 && telefone.length < 14;
+  const senhaCurta = senha.length > 0 && senha.length < 8;
+  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
+
+  const handleRegistro = async () => {
+  setCarregando(true);
+
+  const payload = {
+    nome: nome.trim(),
+    email: emailExibicao,
+    password: senha, 
+    role: 'BARRAQUEIRO',
+    cpf: cpf.replace(/\D/g, ''), 
+    telefone: telefone.replace(/\D/g, ''), 
+    nome_barraca: barraca.trim(), 
+  };
+
+  try {
+    const response = await authService.register(payload);
+
+    if (response.status === 200 || response.status === 201) {
+      router.push({
+        pathname: '/(auth)/verificar-token',
+        params: { email: emailExibicao, origem: 'cadastro' }
+      });
+    }
+  } catch (error: any) {
+    console.log("ERRO NO REGISTRO:", error.response?.data);
+  
+    const msg = error.response?.data?.detail || "Erro ao realizar cadastro.";
+    Alert.alert("Atenção", msg);
+  } finally {
+    setCarregando(false);
+  }
+};
+
   return (
     <ScrollView 
       contentContainerStyle={styles.container} 
@@ -72,7 +115,7 @@ export default function CadastroBarraqueiro() {
         >
           <TextInput
             style={styles.inputFixo}
-            value={emailFixo}
+            value={emailExibicao}
             editable={false}
             pointerEvents="none"
           />
@@ -106,8 +149,11 @@ export default function CadastroBarraqueiro() {
       
       {/* Input nome*/}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Nome Completo</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, nomeCurto && { color: '#e74c3c' }]}>Nome Completo</Text>
+        <View style={[
+          styles.inputComIcone, 
+          nomeCurto && { borderColor: '#e74c3c' }
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             value={nome}
@@ -115,11 +161,17 @@ export default function CadastroBarraqueiro() {
           />
           
         </View>
+        {nomeCurto && (
+          <Text style={styles.textoErro}>O nome deve ter mais de 3 caracteres.</Text>
+        )}
       </View>
       {/* Input nome da barraca*/}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Nome da Barraca</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, nomeBarracaCurto && { color: '#e74c3c' }]}>Nome da Barraca</Text>
+        <View style={[
+          styles.inputComIcone, 
+          nomeBarracaCurto && { borderColor: '#e74c3c' }
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             value={barraca}
@@ -127,11 +179,17 @@ export default function CadastroBarraqueiro() {
           />
           
         </View>
+        {nomeBarracaCurto && (
+          <Text style={styles.textoErro}>O nome da barraca deve ter mais de 3 caracteres.</Text>
+        )}
       </View>
       {/* Input CPF */}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>CPF</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, cpfInvalido && { color: '#e74c3c' }]}>CPF</Text>
+        <View style={[
+          styles.inputComIcone, 
+          cpfInvalido && { borderColor: '#e74c3c' }
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             placeholder="000.000.000-00"
@@ -140,12 +198,18 @@ export default function CadastroBarraqueiro() {
             onChangeText={(txt) => setCpf(aplicarMascaraCPF(txt))}
           />
         </View>
+        {cpfInvalido && (
+          <Text style={styles.textoErro}>O CPF é inválido</Text>
+        )}
       </View>
 
       {/* Input Telefone */}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Telefone</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, telefoneInvalido && { color: '#e74c3c' }]}>Telefone</Text>
+        <View style={[
+          styles.inputComIcone, 
+          telefoneInvalido && { borderColor: '#e74c3c' }
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             placeholder="(00) 00000-0000"
@@ -154,12 +218,18 @@ export default function CadastroBarraqueiro() {
             onChangeText={(txt) => setTelefone(aplicarMascaraTelefone(txt))}
           />
         </View>
+        {telefoneInvalido && (
+          <Text style={styles.textoErro}>O telefone é inválido</Text>
+        )}
       </View>
       
       {/* Input senha*/}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Senha</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, senhaCurta && { color: '#e74c3c' }]}>Senha</Text>
+        <View style={[
+          styles.inputComIcone, 
+          senhaCurta && { borderColor: '#e74c3c' } 
+          ]}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verSenha} 
@@ -171,17 +241,21 @@ export default function CadastroBarraqueiro() {
             <MaterialCommunityIcons 
               name={verSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color="#333" 
+              color={senhaCurta ? "#e74c3c" : "#333"}
             />
           </TouchableOpacity>
         </View>
+        {senhaCurta && <Text style={styles.textoErro}>A senha deve ter pelo menos 8 caracteres.</Text>}
       </View>
 
 
       {/* Input confirmar senha */}
       <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Confirmar Nova Senha</Text>
-        <View style={styles.inputComIcone}>
+        <Text style={[styles.labelFlutuante, senhasDiferentes && { color: '#e74c3c' }]}>Confirmar Nova Senha</Text>
+        <View style={[
+          styles.inputComIcone, 
+          senhasDiferentes && { borderColor: '#e74c3c' } 
+        ]}>
           <TextInput
             style={styles.textInputInterno}
             secureTextEntry={!verConfirmarSenha} 
@@ -193,10 +267,11 @@ export default function CadastroBarraqueiro() {
             <MaterialCommunityIcons 
               name={verConfirmarSenha ? "eye-outline" : "eye-off-outline"} 
               size={24} 
-              color="#333" 
+              color={senhasDiferentes ? "#e74c3c" : "#333"} 
             />
           </TouchableOpacity>
         </View>
+        {senhasDiferentes && <Text style={styles.textoErro}>As senhas não coincidem.</Text>}
       </View>
 
       <TouchableOpacity
@@ -224,15 +299,7 @@ export default function CadastroBarraqueiro() {
           { backgroundColor: formularioValido ? '#2ecc71' : '#ccc' }
         ]}
         disabled={!formularioValido}
-        onPress={() => {
-          console.log("Dados enviados:", { nome, senha });
-          // Navegar para a próxima tela (ex: OTP)
-          console.log("Navegando...");
-          router.push({
-            pathname: '/(auth)/verificar-token',
-            params: { origem: 'cadastro' } 
-          });
-        }}
+        onPress={handleRegistro}
       >
         <Text style={styles.textoBotao}>Continuar</Text>
       </TouchableOpacity>
@@ -386,6 +453,13 @@ const styles = StyleSheet.create({
   },
   linkRoxo: {
     color: '#A369F9',
+  },
+  textoErro: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
   },
 
 });
