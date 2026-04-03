@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import LogoMaré from '../../assets/images/logo.png'; 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ export default function Token() {
   const [timer, setTimer] = useState(30);
   const inputs = useRef<(TextInput | null)[]>([]);
   const [erro, setErro] = useState('');
-  const { origem, email } = useLocalSearchParams(); // Pegue o email aqui
+  const { origem, email, emailDigitado } = useLocalSearchParams();// Pegue o email aqui
   const [carregando, setCarregando] = useState(false);
 
   // Lógica do cronômetro
@@ -54,26 +54,26 @@ export default function Token() {
       setErro('');
 
       try {
-        const emailString = Array.isArray(email) ? email[0] : email;
-        const response = await authService.verifyEmail(emailString, tokenDigitado);
+        const emailString = (email || emailDigitado) as string;
 
-        if (response.status === 200 || response.status === 201) {
-          // SUCESSO!
-          if (origem === 'recuperacao') {
-            router.push('/(auth)/recuperacao-senha/nova-senha');
-          } else {
-            // Cadastro concluído com sucesso
-            router.push('/(auth)/sucesso'); 
+        if (origem === 'cadastro') {
+          const response = await authService.verifyEmail(emailString, tokenDigitado);
+          
+          if (response.status === 200 || response.status === 201) {
+            router.push('/(auth)/sucesso');
           }
+        } 
+        else {
+          router.push({
+            pathname: '/(auth)/recuperacao-senha/nova-senha',
+            params: { email: emailString, token: tokenDigitado }
+          });
         }
       } catch (error: any) {
-        console.log("ERRO NO TOKEN:", error.response?.data);
-        
-        // 2. Ajuste aqui: O FastAPI usa 'detail', não 'message'
+        console.log("ERRO NA VERIFICAÇÃO:", error.response?.data);
         const msg = error.response?.data?.detail || 'Código inválido ou expirado.';
         setErro(typeof msg === 'string' ? msg : "Erro na validação do código");
         
-        // Opcional: limpar o código se der erro
         setCode(['', '', '', '', '', '']);
         inputs.current[0]?.focus();
       } finally {
@@ -82,24 +82,35 @@ export default function Token() {
     }
   };
 
-const handleResend = async () => {
-  if (timer === 0) {
-    try {
-      const emailString = Array.isArray(email) ? email[0] : email;
-      await authService.resendToken(emailString);
-      setTimer(60); 
-      Alert.alert("Sucesso", "Um novo código foi enviado para seu e-mail.");
-    } catch (error) {
-      Alert.alert("Erro", "Não foi possível reenviar o código agora.");
-    }
-  }
-};
 
+const handleResend = async () => {
+    if (timer === 0) {
+      try {
+        const emailString = Array.isArray(email) ? email[0] : email;
+
+        if (origem === 'cadastro') {
+          await authService.resendSignup(emailString);
+        } else {
+          await authService.forgotPassword(emailString);
+        }
+
+        setTimer(60); 
+        console.log("Sucesso", "Um novo código foi enviado para seu e-mail.");
+      } catch (error: any) {
+        console.log("ERRO NO REENVIO:", error.response?.data);
+      }
+    }
+  };
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
     >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} // ESTA LINHA É A CHAVE
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Text style={{ fontSize: 24 }}>←</Text>
       </TouchableOpacity>
@@ -170,6 +181,7 @@ const handleResend = async () => {
           </TouchableOpacity>
         </View>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -278,6 +290,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     flex: 1, // Para o texto quebrar linha se for grande
     fontWeight: '500',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
 
 });

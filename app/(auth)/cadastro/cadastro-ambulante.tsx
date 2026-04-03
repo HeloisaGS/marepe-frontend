@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform  } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { authService } from '../../../services/authService';
+
 
 export default function CadastroAmbulante() {
   const [nome, setNome] = useState('');
@@ -14,9 +16,12 @@ export default function CadastroAmbulante() {
   const [foto, setFoto] = useState(null); // Vai ser opcional?
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  // E-mail mockado 
-  const emailFixo = "exemplo@email.com";
+  // Email digitado na página anterior
+  const { emailDigitado } = useLocalSearchParams();
+  const emailExibicao = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado;
+  
 
   // Lógica de validação simplificada
   const formularioValido =
@@ -43,187 +48,271 @@ export default function CadastroAmbulante() {
       .replace(/(\d{5})(\d)/, '$1-$2')
       .replace(/(-\d{4})\d+?$/, '$1');
   };
-  
+
+  // Erros nos campos
+  const nomeCurto = nome.trim().length > 0 && nome.trim().length <= 3;
+  const cpfInvalido = cpf.length > 0 && cpf.length < 14;
+  const telefoneInvalido = telefone.length > 0 && telefone.length < 14;
+  const senhaCurta = senha.length > 0 && senha.length < 8;
+  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
+
+  // Função de envio para a api
+  const handleRegistro = async () => {
+    setCarregando(true);
+    try {
+      const payload = {
+        nome: nome,
+        email: emailExibicao,
+        password: senha,
+        role: 'AMBULANTE', 
+        cpf: cpf.replace(/\D/g, ''), 
+        telefone: telefone.replace(/\D/g, ''), 
+      };
+
+      console.log("🟢 Iniciando chamada de registro...");
+      
+      // Chamada para o serviço
+      await authService.register(payload);
+      
+      // Se chegou aqui, o back-end retornou 200/201. 
+      // O Axios joga QUALQUER erro (400, 422, 500) direto para o catch abaixo.
+      
+      console.log("🟢 Registro concluído com sucesso, navegando...");
+
+      router.push({
+        pathname: '/(auth)/verificar-token', 
+        params: { email: emailExibicao, origem: 'cadastro' }
+      });
+
+    } catch (error: any) {
+      console.log("🔴 ERRO NO CADASTRO:", error.response?.data || error.message);
+      
+      // Pega a mensagem real vinda do servidor ou uma padrão
+      const mensagemErro = error.response?.data?.detail;
+      
+      Alert.alert(
+        "Atenção", 
+        Array.isArray(mensagemErro) ? mensagemErro[0].msg : (mensagemErro || "Erro ao conectar com o servidor")
+      );
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   return (
-    <ScrollView 
-      contentContainerStyle={styles.container} 
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Ajuste esse número se necessário
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.tituloHeader}>Registro</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <MaterialCommunityIcons name="arrow-left" size={28} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.tituloHeader}>Registro</Text>
+          <View style={{ width: 28 }} />
+        </View>
 
-      <View style={styles.containerFoto}>
-        <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
-          <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
-        </TouchableOpacity>
-      </View>
-      <View style={{ zIndex: 10 }}> 
-        <TouchableOpacity 
-          style={styles.inputContainerFixo} 
-          onPress={() => setExibirOpcoesEmail(!exibirOpcoesEmail)}
-          activeOpacity={0.8}
-        >
-          <TextInput
-            style={styles.inputFixo}
-            value={emailFixo}
-            editable={false}
-            pointerEvents="none"
-          />
-          <MaterialCommunityIcons 
-            name={exibirOpcoesEmail ? "chevron-up" : "chevron-down"} 
-            size={24} 
-            color="#C6C6C6" 
-          />
-        </TouchableOpacity>
+        <View style={styles.containerFoto}>
+          <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ zIndex: 10 }}> 
+          <TouchableOpacity 
+            style={styles.inputContainerFixo} 
+            onPress={() => setExibirOpcoesEmail(!exibirOpcoesEmail)}
+            activeOpacity={0.8}
+          >
+            <TextInput
+              style={styles.inputFixo}
+              value={emailExibicao}
+              editable={false}
+              pointerEvents="none"
+            />
+            <MaterialCommunityIcons 
+              name={exibirOpcoesEmail ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#C6C6C6" 
+            />
+          </TouchableOpacity>
 
-        {/* A Lista "Dropdown" */}
-        {exibirOpcoesEmail && (
-          <View style={styles.dropdownEmail}>
-            <TouchableOpacity 
-              style={styles.opcaoDropdown} 
-              onPress={() => router.push('/(auth)')}
-            >
-              <Text style={styles.textoOpcao}>Trocar o e-mail</Text>
-            </TouchableOpacity>
+          {/* A Lista "Dropdown" */}
+          {exibirOpcoesEmail && (
+            <View style={styles.dropdownEmail}>
+              <TouchableOpacity 
+                style={styles.opcaoDropdown} 
+                onPress={() => router.push('/(auth)')}
+              >
+                <Text style={styles.textoOpcao}>Trocar o e-mail</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.opcaoDropdown, { borderBottomWidth: 0 }]} 
+                onPress={() => setExibirOpcoesEmail(false)}
+              >
+                <Text style={styles.textoOpcao}>Continuar com este e-mail</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        
+        {/* Input nome*/}
+        <View style={styles.inputWrapper}>
+          <Text style={[styles.labelFlutuante, nomeCurto && { color: '#e74c3c' }]}>Nome Completo</Text>
+          <View style={[
+            styles.inputComIcone, 
+            nomeCurto && { borderColor: '#e74c3c' }
+          ]}>
+            <TextInput
+              style={styles.textInputInterno}
+              value={nome}
+              onChangeText={setNome}
+            />
             
-            <TouchableOpacity 
-              style={[styles.opcaoDropdown, { borderBottomWidth: 0 }]} 
-              onPress={() => setExibirOpcoesEmail(false)}
-            >
-              <Text style={styles.textoOpcao}>Continuar com este e-mail</Text>
+          </View>
+          {nomeCurto && (
+            <Text style={styles.textoErro}>O nome deve ter mais de 3 caracteres.</Text>
+          )}
+        </View>
+        {/* Input CPF */}
+        <View style={styles.inputWrapper}>
+          <Text style={[styles.labelFlutuante, cpfInvalido && { color: '#e74c3c' }]}>CPF</Text>
+          <View style={[
+            styles.inputComIcone, 
+            cpfInvalido && { borderColor: '#e74c3c' }
+          ]}>
+            <TextInput
+              style={styles.textInputInterno}
+              placeholder="000.000.000-00"
+              keyboardType="numeric"
+              value={cpf}
+              onChangeText={(txt) => setCpf(aplicarMascaraCPF(txt))}
+            />
+          </View>
+          {cpfInvalido && (
+            <Text style={styles.textoErro}>O CPF é inválido</Text>
+          )}
+        </View>
+
+        {/* Input Telefone */}
+        <View style={styles.inputWrapper}>
+          <Text style={[styles.labelFlutuante, telefoneInvalido && { color: '#e74c3c' }]}>Telefone</Text>
+          <View style={[
+            styles.inputComIcone, 
+            telefoneInvalido && { borderColor: '#e74c3c' }
+          ]}>
+            <TextInput
+              style={styles.textInputInterno}
+              placeholder="(00) 00000-0000"
+              keyboardType="phone-pad"
+              value={telefone}
+              onChangeText={(txt) => setTelefone(aplicarMascaraTelefone(txt))}
+            />
+          </View>
+          {telefoneInvalido && (
+            <Text style={styles.textoErro}>O telefone é inválido</Text>
+          )}
+        </View>
+        
+        {/* Input senha*/}
+        <View style={styles.inputWrapper}>
+          <Text style={[styles.labelFlutuante, senhaCurta && { color: '#e74c3c' }]}>Senha</Text>
+          <View style={[
+            styles.inputComIcone, 
+            senhaCurta && { borderColor: '#e74c3c' } 
+            ]}>
+            <TextInput
+              style={styles.textInputInterno}
+              secureTextEntry={!verSenha} 
+              value={senha}
+              onChangeText={setSenha}
+            />
+            
+            <TouchableOpacity onPress={() => setVerSenha(!verSenha)}>
+              <MaterialCommunityIcons 
+                name={verSenha ? "eye-outline" : "eye-off-outline"} 
+                size={24} 
+                color={senhaCurta ? "#e74c3c" : "#333"}
+              />
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+          {senhaCurta && <Text style={styles.textoErro}>A senha deve ter pelo menos 8 caracteres.</Text>}
+        </View>
 
-      
-      {/* Input nome*/}
-      <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Nome Completo</Text>
-        <View style={styles.inputComIcone}>
-          <TextInput
-            style={styles.textInputInterno}
-            value={nome}
-            onChangeText={setNome}
-          />
-          
-        </View>
-      </View>
-      {/* Input CPF */}
-      <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>CPF</Text>
-        <View style={styles.inputComIcone}>
-          <TextInput
-            style={styles.textInputInterno}
-            placeholder="000.000.000-00"
-            keyboardType="numeric"
-            value={cpf}
-            onChangeText={(txt) => setCpf(aplicarMascaraCPF(txt))}
-          />
-        </View>
-      </View>
 
-      {/* Input Telefone */}
-      <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Telefone</Text>
-        <View style={styles.inputComIcone}>
-          <TextInput
-            style={styles.textInputInterno}
-            placeholder="(00) 00000-0000"
-            keyboardType="phone-pad"
-            value={telefone}
-            onChangeText={(txt) => setTelefone(aplicarMascaraTelefone(txt))}
-          />
-        </View>
-      </View>
-      
-      {/* Input senha*/}
-      <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Senha</Text>
-        <View style={styles.inputComIcone}>
-          <TextInput
-            style={styles.textInputInterno}
-            secureTextEntry={!verSenha} 
-            value={senha}
-            onChangeText={setSenha}
-          />
-          
-          <TouchableOpacity onPress={() => setVerSenha(!verSenha)}>
-            <MaterialCommunityIcons 
-              name={verSenha ? "eye-outline" : "eye-off-outline"} 
-              size={24} 
-              color="#333" 
+        {/* Input confirmar senha */}
+        <View style={styles.inputWrapper}>
+          <Text style={[styles.labelFlutuante, senhasDiferentes && { color: '#e74c3c' }]}>Confirmar Nova Senha</Text>
+          <View style={[
+            styles.inputComIcone, 
+            senhasDiferentes && { borderColor: '#e74c3c' } 
+          ]}>
+            <TextInput
+              style={styles.textInputInterno}
+              secureTextEntry={!verConfirmarSenha} 
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
             />
-          </TouchableOpacity>
+            
+            <TouchableOpacity onPress={() => setVerConfirmarSenha(!verConfirmarSenha)}>
+              <MaterialCommunityIcons 
+                name={verConfirmarSenha ? "eye-outline" : "eye-off-outline"} 
+                size={24} 
+                color={senhasDiferentes ? "#e74c3c" : "#333"}  
+              />
+            </TouchableOpacity>
+          </View>
+          {senhasDiferentes && <Text style={styles.textoErro}>As senhas não coincidem.</Text>}
         </View>
-      </View>
 
-
-      {/* Input confirmar senha */}
-      <View style={styles.inputWrapper}>
-        <Text style={styles.labelFlutuante}>Confirmar Nova Senha</Text>
-        <View style={styles.inputComIcone}>
-          <TextInput
-            style={styles.textInputInterno}
-            secureTextEntry={!verConfirmarSenha} 
-            value={confirmarSenha}
-            onChangeText={setConfirmarSenha}
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          activeOpacity={0.7}
+          onPress={() => setAceitouTermos(!aceitouTermos)}
+        >
+          <MaterialCommunityIcons
+            name={aceitouTermos ? "checkbox-marked" : "checkbox-blank-outline"}
+            size={24}
+            color={aceitouTermos ? "#6750A4" : "#666"}
           />
-          
-          <TouchableOpacity onPress={() => setVerConfirmarSenha(!verConfirmarSenha)}>
-            <MaterialCommunityIcons 
-              name={verConfirmarSenha ? "eye-outline" : "eye-off-outline"} 
-              size={24} 
-              color="#333" 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+          <Text style={styles.textoCheckbox}>Li e aceito os 
+              <Text
+                  style={styles.linkRoxo}
+                  onPress={()=>router.push('/(auth)/termos')}
+              > Termos de uso
+              </Text>
+          </Text>
 
-      <TouchableOpacity
-        style={styles.checkboxContainer}
-        activeOpacity={0.7}
-        onPress={() => setAceitouTermos(!aceitouTermos)}
-      >
-        <MaterialCommunityIcons
-          name={aceitouTermos ? "checkbox-marked" : "checkbox-blank-outline"}
-          size={24}
-          color={aceitouTermos ? "#6750A4" : "#666"}
-        />
-        <Text style={styles.textoCheckbox}>Li e aceito os 
-            <Text
-                style={styles.linkRoxo}
-                onPress={()=>router.push('/(auth)/termos')}
-            > Termos de uso
-            </Text>
-        </Text>
+        </TouchableOpacity>
 
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.botao, 
-          { backgroundColor: formularioValido ? '#2ecc71' : '#ccc' }
-        ]}
-        disabled={!formularioValido}
-        onPress={() => {
-          console.log("Dados enviados:", { nome, senha });
-          // Navegar para a próxima tela (ex: OTP)
-          console.log("Navegando...");
-          router.push({
-            pathname: '/(auth)/verificar-token',
-            params: { origem: 'cadastro' } 
+        <TouchableOpacity
+          style={[
+            styles.botao, 
+            { backgroundColor: formularioValido ? '#2ecc71' : '#ccc' }
+          ]}
+          disabled={!formularioValido}
+          onPress={() => {
+            console.log("Enviando Payload para o Back-end:", {
+            nome: nome,
+            email: emailExibicao,
+            password: senha,
+            role: 'AMBULANTE', 
+            cpf: cpf.replace(/\D/g, ''), 
+            telefone: telefone.replace(/\D/g, ''), 
           });
-        }}
-      >
-        <Text style={styles.textoBotao}>Continuar</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          handleRegistro();
+          }}
+        >
+          <Text style={styles.textoBotao}>Continuar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -373,6 +462,13 @@ const styles = StyleSheet.create({
   },
   linkRoxo: {
     color: '#A369F9',
+  },
+  textoErro: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
   },
 
 });
