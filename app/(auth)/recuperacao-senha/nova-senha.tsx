@@ -39,45 +39,75 @@ export default function DefinirSenha() {
   const senhasIguais = senha === confirmarSenha;
   const senhasConferem = senhaValida && senhasIguais;
 
-const handleRedefinirSenha = async () => {
-  if (!senhasConferem) {
-    Alert.alert('Erro', 'As senhas não conferem ou têm menos de 8 caracteres.');
-    return;
-  }
+  const senhaCurta = senha.length > 0 && senha.length < 8;
+  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
 
-  if (!emailFinal || !tokenFinal) {
-    Alert.alert('Erro', 'E-mail ou token não encontrados. Volte e solicite o código novamente.');
-    return;
-  }
+  const handleRedefinirSenha = async () => {
+    if (!senhaValida) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 8 caracteres.');
+      return;
+    }
 
-  setCarregando(true);
+    if (!senhasIguais) {
+      Alert.alert('Erro', 'As senhas não coincidem.');
+      return;
+    }
 
-  try {
-    const response = await authService.resetPassword(emailFinal, tokenFinal, senha);
+    if (!emailFinal || !tokenFinal) {
+      Alert.alert('Erro', 'E-mail ou token não encontrados. Volte e solicite o código novamente.');
+      return;
+    }
 
-    console.log('Senha redefinida:', response.data);
+    setCarregando(true);
 
-    router.replace({
-      pathname: '/(auth)/sucesso',
-      params: {
-        emailDigitado: emailFinal,
-        senhaDigitada: senha,
-      },
-    });
-  } catch (error: any) {
-    console.log('Erro ao redefinir:', error.response?.data || error.message);
+    try {
+      const response = await authService.resetPassword(emailFinal, tokenFinal, senha);
 
-    const msgErro =
-      error?.response?.data?.detail ||
-      error?.response?.data?.message ||
-      error?.response?.data?.erro ||
-      'Não foi possível redefinir a senha.';
+      console.log('Senha redefinida:', response.data);
 
-    Alert.alert('Erro', msgErro);
-  } finally {
-    setCarregando(false);
-  }
-};
+      router.replace({
+        pathname: '/(auth)/sucesso',
+        params: {
+          emailDigitado: emailFinal,
+          senhaDigitada: senha,
+        },
+      });
+    } catch (error: any) {
+      console.log('Erro ao redefinir:', error.response?.data || error.message);
+
+      const msgBackend =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.response?.data?.erro ||
+        '';
+
+      const msgLower = String(msgBackend).toLowerCase();
+      const semInternet =
+        error.message?.includes('Network Error') ||
+        error.message?.includes('timeout') ||
+        !error.response;
+
+      if (semInternet) {
+        Alert.alert('Erro', 'Sem conexão com a internet. Verifique seu sinal e tente novamente.');
+      } else if (
+        msgLower.includes('expired') ||
+        msgLower.includes('expirado')
+      ) {
+        Alert.alert('Erro', 'Este código expirou. Solicite um novo código.');
+      } else if (
+        msgLower.includes('not found') ||
+        msgLower.includes('não encontrado') ||
+        msgLower.includes('não encontrada') ||
+        (msgLower.includes('email') && msgLower.includes('conta'))
+      ) {
+        Alert.alert('Erro', 'Não encontramos uma conta associada a este e-mail.');
+      } else {
+        Alert.alert('Erro', msgBackend || 'Não foi possível redefinir a senha.');
+      }
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -98,8 +128,8 @@ const handleRedefinirSenha = async () => {
           </View>
 
           <View style={styles.senhaWrapper}>
-            <Text style={styles.labelSenha}>Nova Senha</Text>
-            <View style={styles.senhaContainer}>
+            <Text style={[styles.labelSenha, senhaCurta && styles.labelErro]}>Nova Senha</Text>
+            <View style={[styles.senhaContainer, senhaCurta && styles.senhaContainerErro]}>
               <TextInput
                 style={styles.inputSenha}
                 secureTextEntry={!mostrarSenha}
@@ -115,11 +145,16 @@ const handleRedefinirSenha = async () => {
                 />
               </TouchableOpacity>
             </View>
+            {senhaCurta && (
+              <Text style={styles.textoErro}>
+                A senha deve ter pelo menos 8 caracteres.
+              </Text>
+            )}
           </View>
 
           <View style={styles.senhaWrapper}>
-            <Text style={styles.labelSenha}>Confirmar Nova Senha</Text>
-            <View style={styles.senhaContainer}>
+            <Text style={[styles.labelSenha, senhasDiferentes && styles.labelErro]}>Confirmar Nova Senha</Text>
+            <View style={[styles.senhaContainer, senhasDiferentes && styles.senhaContainerErro]}>
               <TextInput
                 style={styles.inputSenha}
                 secureTextEntry={!mostrarConfirmarSenha}
@@ -135,6 +170,11 @@ const handleRedefinirSenha = async () => {
                 />
               </TouchableOpacity>
             </View>
+            {senhasDiferentes && (
+              <Text style={styles.textoErro}>
+                As senhas informadas não coincidem.
+              </Text>
+            )}
           </View>
 
           <Pressable
@@ -236,5 +276,21 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     fontWeight: 'bold'
-  }
+  },
+  senhaContainerErro: {
+    borderColor: '#e74c3c',
+  },
+
+  textoErro: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+
+  labelErro: {
+    color: '#e74c3c',
+  },
+
 });

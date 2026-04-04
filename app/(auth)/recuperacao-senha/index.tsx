@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
-import { router, useLocalSearchParams} from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../../assets/images/logo.png';
 import { authService } from '../../../services/authService';
@@ -18,28 +18,35 @@ export default function RecuperacaoSenha() {
   };
 
   const emailValido = validarEmail(email);
- 
+
 
   // Função para chamar a API
   const handleEnviarCodigo = async () => {
-    
+
     if (!emailValido || carregando) return;
 
     setCarregando(true);
-    
+
 
     try {
-      
-      const response = await authService.forgotPassword(email.trim());
+      const emailLimpo = email.trim();
 
+      const checkResponse = await authService.checkEmail(emailLimpo);
+      console.log("Check email:", checkResponse.data);
+
+      if (!checkResponse.data?.exists) {
+        Alert.alert("Atenção", "Não encontramos uma conta associada a este e-mail.");
+        return;
+      }
+
+      const response = await authService.forgotPassword(emailLimpo);
       console.log("Resposta recuperação:", response.data);
 
-      // se ok, vai p verficiar token
       router.push({
         pathname: '/(auth)/verificar-token',
         params: {
           origem: 'recuperacao',
-          emailDigitado: email.trim()
+          emailDigitado: emailLimpo
         }
       });
 
@@ -94,7 +101,7 @@ export default function RecuperacaoSenha() {
               pressed && emailValido && { opacity: 0.7 }
             ]}
           >
-            <Text style={[styles.textoBotaoContinuar, { color: emailValido ? '#100101' : '#999' }]}>
+            <Text style={[styles.textoBotaoContinuar, { color: emailValido ? '#100101' : '#472323' }]}>
               Enviar Código de Recuperação
             </Text>
           </Pressable>
@@ -111,7 +118,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 25,
-    backgroundColor: '#FFFFFF',    
+    backgroundColor: '#FFFFFF',
     paddingTop: 70,
   },
   header: {
