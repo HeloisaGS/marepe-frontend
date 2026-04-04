@@ -1,31 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams} from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../../assets/images/logo.png';
 import { authService } from '../../../services/authService';
 
 
 export default function RecuperacaoSenha() {
-  const [email, setEmail] = useState('');
+  const { emailDigitado } = useLocalSearchParams();
+  const emailInicial = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado || '';
+
+  const [email, setEmail] = useState(emailInicial);
   const [carregando, setCarregando] = useState(false);
-  //validacao
+
   const validarEmail = (email: string) => {
     return /\S+@\S+\.\S+/.test(email);
   };
+
   const emailValido = validarEmail(email);
+ 
 
   // Função para chamar a API
   const handleEnviarCodigo = async () => {
     
-    if (!emailValido) return;
+    if (!emailValido || carregando) return;
 
     setCarregando(true);
     
 
     try {
       
-      const response = await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(email.trim());
 
       console.log("Resposta recuperação:", response.data);
 
@@ -34,7 +39,7 @@ export default function RecuperacaoSenha() {
         pathname: '/(auth)/verificar-token',
         params: {
           origem: 'recuperacao',
-          emailDigitado: email 
+          emailDigitado: email.trim()
         }
       });
 
@@ -42,7 +47,10 @@ export default function RecuperacaoSenha() {
       console.log("Erro na recuperação:", error.response?.data || error.message);
 
       //  erro 
-      const msgErro = error.response?.data?.message || "Não foi possível enviar o código. Verifique se o e-mail está correto e tente novamente.";
+      const msgErro = error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.response?.data?.erro ||
+        'Não foi possível enviar o código. Verifique se o e-mail está correto e tente novamente.';
       Alert.alert("Atenção", msgErro);
 
     } finally {
@@ -102,17 +110,12 @@ export default function RecuperacaoSenha() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 50,
     paddingHorizontal: 25,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'flex-start',
-    paddingTop: 120,
+    backgroundColor: '#FFFFFF',    
+    paddingTop: 70,
   },
   header: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    zIndex: 10,
+    marginBottom: 40,
   },
   logoContainer: {
     alignItems: 'center',

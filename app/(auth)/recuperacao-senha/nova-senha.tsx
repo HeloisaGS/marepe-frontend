@@ -26,47 +26,58 @@ export default function DefinirSenha() {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
-  const { emailDigitado, token } = useLocalSearchParams();
-  
+  const { email, emailDigitado, token } = useLocalSearchParams();
+
+  const emailFinal = Array.isArray(email)
+    ? email[0]
+    : email || (Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado);
+
+  const tokenFinal = Array.isArray(token) ? token[0] : token;
+
 
   const senhaValida = senha.trim().length >= 8;
   const senhasIguais = senha === confirmarSenha;
   const senhasConferem = senhaValida && senhasIguais;
 
-  const handleRedefinirSenha = async () => {
-    if (!senhasConferem) {
-      Alert.alert('Erro', 'As senhas não conferem ou são muito curtas.');
-      return;
-    }
+const handleRedefinirSenha = async () => {
+  if (!senhasConferem) {
+    Alert.alert('Erro', 'As senhas não conferem ou têm menos de 8 caracteres.');
+    return;
+  }
 
-    const email = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado;
-    const userToken = Array.isArray(token) ? token[0] : token;
+  if (!emailFinal || !tokenFinal) {
+    Alert.alert('Erro', 'E-mail ou token não encontrados. Volte e solicite o código novamente.');
+    return;
+  }
 
+  setCarregando(true);
 
-    if (!email || !userToken) {
-      Alert.alert('Erro', 'erro ao redefinir a senha.');
-      return;
-    }
+  try {
+    const response = await authService.resetPassword(emailFinal, tokenFinal, senha);
 
-    setCarregando(true);
+    console.log('Senha redefinida:', response.data);
 
-    try {
-      const response = await authService.resetPassword(email, userToken, senha);
+    router.replace({
+      pathname: '/(auth)/sucesso',
+      params: {
+        emailDigitado: emailFinal,
+        senhaDigitada: senha,
+      },
+    });
+  } catch (error: any) {
+    console.log('Erro ao redefinir:', error.response?.data || error.message);
 
-      console.log('Senha redefinida:', response.data);
+    const msgErro =
+      error?.response?.data?.detail ||
+      error?.response?.data?.message ||
+      error?.response?.data?.erro ||
+      'Não foi possível redefinir a senha.';
 
-      router.replace('/(auth)/sucesso');
-    } catch (error: any) {
-      console.log('Erro ao redefinir:', error.response?.data || error.message);
-
-      Alert.alert(
-        'Erro',
-        error?.response?.data?.message || 'Não foi possível redefinir a senha.'
-      );
-    } finally {
-      setCarregando(false);
-    }
-  };
+    Alert.alert('Erro', msgErro);
+  } finally {
+    setCarregando(false);
+  }
+};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
