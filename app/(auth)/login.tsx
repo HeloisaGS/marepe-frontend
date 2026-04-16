@@ -1,95 +1,140 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert, } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import LogoMaré from '../../assets/images/logo.png'; 
+import LogoMaré from '../../assets/images/logo.png';
+import { authService } from '../../services/authService';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const { emailDigitado } = useLocalSearchParams();
+  const email = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado || '';
+
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const senhaValida = senha.length >= 8;
+  const [carregando, setCarregando] = useState(false);
+
+  const senhaValida = senha.trim().length >= 8;
+  const validacao = email.trim().length > 0 && senhaValida && !carregando;
+
+
+  const handleLogin = async () => {
+    if (!validacao) return;
+    setCarregando(true);
+
+    try {
+      const response = await authService.login(email.trim(), senha);
+      console.log('Resposta do login:', response.data);
+
+
+      router.push('/(auth)/sucesso');
+
+    } catch (error: any) {
+      console.log('Erro ao logar:', error.response?.data || error.message);
+
+      const mensagem =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.response?.data?.erro ||
+        'Email ou senha inválidos.';
+      Alert.alert('Erro', mensagem);
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <View style={styles.container}>
-        
-        {/* logo */}
-        <View style={styles.logoContainer}>
-          <Image source={LogoMaré} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.tituloLogo}>MaréPE</Text>
-        </View>
-      {/* email */}
-        <View style={styles.emailContainer}>
-          <TextInput 
-            style={styles.emailTexto} 
-            placeholder="usuario_teste@gmail.co" 
-            value={email}
-            onChangeText={setEmail}
-          />
-          <MaterialCommunityIcons name="check" size={24} color="#333" />
-        </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
 
-        {/* senha */}
-        <View style={styles.senhaWrapper}>
-          <Text style={styles.labelSenha}>Senha MaréPE</Text>
-          <View style={styles.senhaContainer}>
+          {/* logo */}
+          <View style={styles.logoContainer}>
+            <Image source={LogoMaré} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.tituloLogo}>MaréPE</Text>
+          </View>
+          {/* email */}
+          <View style={styles.emailContainer}>
             <TextInput
-              style={styles.inputSenha}
-              secureTextEntry={!mostrarSenha}
-              value={senha}
-              onChangeText={setSenha}
-              
+              style={styles.emailTexto}
+              placeholder="usuario_teste@gmail.com"
+              value={email}
+              editable={false}
             />
-            <TouchableOpacity onPress={() => setMostrarSenha(!mostrarSenha)}>
-              <MaterialCommunityIcons 
-                name={mostrarSenha ? "eye" : "eye-off"} 
-                size={24} 
-                color="#000" 
+            <MaterialCommunityIcons name="check" size={24} color="#333" />
+          </View>
+
+          {/* senha */}
+          <View style={styles.senhaWrapper}>
+            <Text style={styles.labelSenha}>Senha MaréPE</Text>
+            <View style={styles.senhaContainer}>
+              <TextInput
+                style={styles.inputSenha}
+                secureTextEntry={!mostrarSenha}
+                value={senha}
+                onChangeText={setSenha}
+
               />
+              <TouchableOpacity onPress={() => setMostrarSenha(!mostrarSenha)}>
+                <MaterialCommunityIcons
+                  name={mostrarSenha ? "eye" : "eye-off"}
+                  size={24}
+                  color="#000"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Termos de Uso */}
+          <Text style={styles.textoTermos}>
+            Ao continuar, você concorda com as <Text style={styles.linkRoxo}>Condições de Uso</Text>
+          </Text>
+
+          {/* btn continuar */}
+          <Pressable
+            disabled={!validacao}
+            onPress={handleLogin}
+            style={({ pressed }) => [
+              styles.botaoContinuar,
+              { backgroundColor: validacao ? '#79FF79' : '#EAEAEA' },
+              pressed && validacao && { opacity: 0.7 }
+            ]}
+          >
+            {carregando ? (
+              <ActivityIndicator color="#100101" />
+            ) : (
+              <Text
+                style={[
+                  styles.textoBotaoContinuar,
+                  { color: validacao ? '#100101' : '#999' }
+                ]}
+              >
+                Continuar
+              </Text>
+            )}
+          </Pressable>
+
+          {/* link */}
+          <View style={styles.linksContainer}>
+            <TouchableOpacity onPress={() =>
+              router.push({
+                pathname: '/(auth)/recuperacao-senha',
+                params: { emailDigitado: email },
+              })
+            }>
+              <Text style={styles.linkAzul}>Esqueci minha senha</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.push('/(auth)')}>
+              <Text style={styles.linkLaranja}>Alterar e-mail.</Text>
             </TouchableOpacity>
           </View>
+
         </View>
-
-        {/* Termos de Uso */}
-        <Text style={styles.textoTermos}>
-          Ao continuar, você concorda com as <Text style={styles.linkRoxo}>Condições de Uso</Text>
-        </Text>
-
-        {/* btn continuar */}
-        <Pressable 
-          disabled={!senhaValida} 
-          onPress={() => router.push('/(auth)/sucesso')}
-          style={({ pressed }) => [
-            styles.botaoContinuar,
-            { backgroundColor: senhaValida ? '#79FF79' : '#EAEAEA' },
-            pressed && senhaValida && { opacity: 0.7 }
-          ]}
-        >
-          <Text style={[
-            styles.textoBotaoContinuar, 
-            { color: senhaValida ? '#100101' : '#999' }
-          ]}>
-            Continuar
-          </Text>
-        </Pressable>
-
-        {/* link */}
-        <View style={styles.linksContainer}>
-          <TouchableOpacity onPress={() => router.push('/(auth)/recuperacao-senha')}>
-            <Text style={styles.linkAzul}>Esqueci minha senha</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => router.push('/(auth)')}>
-            <Text style={styles.linkLaranja}>Alterar e-mail.</Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView >
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -108,7 +153,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 250,
     height: 180,
-    
+
   },
   tituloLogo: {
     fontSize: 38,
@@ -150,7 +195,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#221A15', 
+    borderColor: '#221A15',
     borderRadius: 5,
     paddingHorizontal: 15,
     paddingVertical: 10,

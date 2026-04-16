@@ -26,43 +26,84 @@ export default function DefinirSenha() {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
-  const { emailDigitado, token } = useLocalSearchParams();
-  
+  const { email, emailDigitado, token } = useLocalSearchParams();
+
+  const emailFinal = Array.isArray(email)
+    ? email[0]
+    : email || (Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado);
+
+  const tokenFinal = Array.isArray(token) ? token[0] : token;
+
 
   const senhaValida = senha.trim().length >= 8;
   const senhasIguais = senha === confirmarSenha;
   const senhasConferem = senhaValida && senhasIguais;
 
+  const senhaCurta = senha.length > 0 && senha.length < 8;
+  const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
+
   const handleRedefinirSenha = async () => {
-    if (!senhasConferem) {
-      Alert.alert('Erro', 'As senhas não conferem ou são muito curtas.');
+    if (!senhaValida) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 8 caracteres.');
       return;
     }
 
-    const email = Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado;
-    const userToken = Array.isArray(token) ? token[0] : token;
+    if (!senhasIguais) {
+      Alert.alert('Erro', 'As senhas não coincidem.');
+      return;
+    }
 
-
-    if (!email || !userToken) {
-      Alert.alert('Erro', 'erro ao redefinir a senha.');
+    if (!emailFinal || !tokenFinal) {
+      Alert.alert('Erro', 'E-mail ou token não encontrados. Volte e solicite o código novamente.');
       return;
     }
 
     setCarregando(true);
 
     try {
-      const response = await authService.resetPassword(email, userToken, senha);
+      const response = await authService.resetPassword(emailFinal, tokenFinal, senha);
 
       console.log('Senha redefinida:', response.data);
 
-      router.replace('/(auth)/sucesso');
+      router.replace({
+        pathname: '/(auth)/sucesso',
+        params: {
+          emailDigitado: emailFinal,
+          senhaDigitada: senha,
+        },
+      });
     } catch (error: any) {
       console.log('Erro ao redefinir:', error.response?.data || error.message);
 
-      Alert.alert(
-        'Erro',
-        error?.response?.data?.message || 'Não foi possível redefinir a senha.'
-      );
+      const msgBackend =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.response?.data?.erro ||
+        '';
+
+      const msgLower = String(msgBackend).toLowerCase();
+      const semInternet =
+        error.message?.includes('Network Error') ||
+        error.message?.includes('timeout') ||
+        !error.response;
+
+      if (semInternet) {
+        Alert.alert('Erro', 'Sem conexão com a internet. Verifique seu sinal e tente novamente.');
+      } else if (
+        msgLower.includes('expired') ||
+        msgLower.includes('expirado')
+      ) {
+        Alert.alert('Erro', 'Este código expirou. Solicite um novo código.');
+      } else if (
+        msgLower.includes('not found') ||
+        msgLower.includes('não encontrado') ||
+        msgLower.includes('não encontrada') ||
+        (msgLower.includes('email') && msgLower.includes('conta'))
+      ) {
+        Alert.alert('Erro', 'Não encontramos uma conta associada a este e-mail.');
+      } else {
+        Alert.alert('Erro', msgBackend || 'Não foi possível redefinir a senha.');
+      }
     } finally {
       setCarregando(false);
     }
@@ -87,8 +128,8 @@ export default function DefinirSenha() {
           </View>
 
           <View style={styles.senhaWrapper}>
-            <Text style={styles.labelSenha}>Nova Senha</Text>
-            <View style={styles.senhaContainer}>
+            <Text style={[styles.labelSenha, senhaCurta && styles.labelErro]}>Nova Senha</Text>
+            <View style={[styles.senhaContainer, senhaCurta && styles.senhaContainerErro]}>
               <TextInput
                 style={styles.inputSenha}
                 secureTextEntry={!mostrarSenha}
@@ -104,11 +145,16 @@ export default function DefinirSenha() {
                 />
               </TouchableOpacity>
             </View>
+            {senhaCurta && (
+              <Text style={styles.textoErro}>
+                A senha deve ter pelo menos 8 caracteres.
+              </Text>
+            )}
           </View>
 
           <View style={styles.senhaWrapper}>
-            <Text style={styles.labelSenha}>Confirmar Nova Senha</Text>
-            <View style={styles.senhaContainer}>
+            <Text style={[styles.labelSenha, senhasDiferentes && styles.labelErro]}>Confirmar Nova Senha</Text>
+            <View style={[styles.senhaContainer, senhasDiferentes && styles.senhaContainerErro]}>
               <TextInput
                 style={styles.inputSenha}
                 secureTextEntry={!mostrarConfirmarSenha}
@@ -124,6 +170,11 @@ export default function DefinirSenha() {
                 />
               </TouchableOpacity>
             </View>
+            {senhasDiferentes && (
+              <Text style={styles.textoErro}>
+                As senhas informadas não coincidem.
+              </Text>
+            )}
           </View>
 
           <Pressable
@@ -225,5 +276,21 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     fontWeight: 'bold'
-  }
+  },
+  senhaContainerErro: {
+    borderColor: '#e74c3c',
+  },
+
+  textoErro: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+
+  labelErro: {
+    color: '#e74c3c',
+  },
+
 });
