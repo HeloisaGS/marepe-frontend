@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '../../../services/authService';
+import * as ImagePicker from 'expo-image-picker';
+
+interface FotoProps {
+  uri: string;
+  name?: string;
+  type?: string;
+}
 
 export default function CadastroBarraqueiro() {
   const [nome, setNome] = useState('');
@@ -13,10 +20,11 @@ export default function CadastroBarraqueiro() {
   const [verSenha, setVerSenha] = useState(false);
   const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
   const [exibirOpcoesEmail, setExibirOpcoesEmail] = useState(false);
-  const [foto, setFoto] = useState(null); // Vai ser opcional?
+  const [foto, setFoto] = useState<FotoProps | null>(null); // Vai ser opcional?
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
   const [carregando, setCarregando] = useState(false);
+  
 
   // Email digitado na página anterior
     const { emailDigitado } = useLocalSearchParams();
@@ -32,6 +40,7 @@ export default function CadastroBarraqueiro() {
     senha === confirmarSenha &&
     aceitouTermos;
   // Para ajustar telefone e CPF
+  
   const aplicarMascaraCPF = (valor: string) => {
     return valor
       .replace(/\D/g, '') // Remove tudo que não é número
@@ -58,41 +67,118 @@ export default function CadastroBarraqueiro() {
   const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
 
   const handleRegistro = async () => {
-  setCarregando(true);
+    setCarregando(true);
 
-  const payload = {
-    nome: nome.trim(),
-    email: emailExibicao,
-    password: senha, 
-    role: 'BARRAQUEIRO',
-    cpf: cpf.replace(/\D/g, ''), 
-    telefone: telefone.replace(/\D/g, ''), 
-    nome_barraca: barraca.trim(), 
+    const formData = new FormData();
+
+    formData.append('nome', nome.trim());
+    formData.append('email', emailExibicao);
+    formData.append('password', senha);
+    formData.append('role', 'BARRAQUEIRO');
+    formData.append('cpf', cpf.replace(/\D/g, ''));
+    formData.append('telefone', telefone.replace(/\D/g, ''));
+    formData.append('nome_barraca', barraca.trim());
+
+    if (foto) {
+      formData.append('foto', {
+        uri: foto.uri, 
+        name: 'photo.jpg',
+        type: 'image/jpeg',
+      } as any);
+    }
+
+    try {
+      const response = await authService.register(formData);
+
+      if (response.status === 200 || response.status === 201) {
+        router.push({
+          pathname: '/(auth)/verificar-token',
+          params: { email: emailExibicao, origem: 'cadastro' }
+        });
+      }
+    } catch (error: any) {
+      console.log("ERRO NO REGISTRO:", error.response?.data);
+      const msg = error.response?.data?.detail || "Erro ao realizar cadastro.";
+      Alert.alert("Atenção", msg);
+    } finally {
+      setCarregando(false);
+    }
   };
 
-  try {
-    const response = await authService.register(payload);
+  const selecionarImagem = () => {
+    Alert.alert(
+      "Selecionar Foto",
+      "De onde você deseja adicionar a foto?",
+      [
+        {
+          text: "Tirar Foto (Câmera)",
+          onPress: abrirCamera,
+        },
+        {
+          text: "Escolher da Galeria",
+          onPress: abrirGaleria,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
-    if (response.status === 200 || response.status === 201) {
-      router.push({
-        pathname: '/(auth)/verificar-token',
-        params: { email: emailExibicao, origem: 'cadastro' }
+  const abrirCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão necessária", "Precisamos de acesso à câmera.");
+      return;
+    }
+
+    const resultado = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!resultado.canceled) {
+      setFoto({
+        uri: resultado.assets[0].uri,
+        name: 'camera_photo.jpg',
+        type: 'image/jpeg',
       });
     }
-  } catch (error: any) {
-    console.log("ERRO NO REGISTRO:", error.response?.data);
-  
-    const msg = error.response?.data?.detail || "Erro ao realizar cadastro.";
-    Alert.alert("Atenção", msg);
-  } finally {
-    setCarregando(false);
-  }
-};
+  };
 
+  const abrirGaleria = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão necessária", "Precisamos de acesso às fotos.");
+      return;
+    }
+
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!resultado.canceled) {
+      setFoto({
+        uri: resultado.assets[0].uri,
+        name: 'gallery_photo.jpg',
+        type: 'image/jpeg',
+      });
+    }
+  };
   return (
+    <KeyboardAvoidingView 
+    style={{ flex: 1 }} 
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+  >
     <ScrollView 
       contentContainerStyle={styles.container} 
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -103,8 +189,16 @@ export default function CadastroBarraqueiro() {
       </View>
 
       <View style={styles.containerFoto}>
-        <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
-          <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+        <TouchableOpacity 
+          style={styles.circuloFoto} 
+          activeOpacity={0.8}
+          onPress={selecionarImagem} 
+        >
+          {foto ? (
+            <Image source={{ uri: foto.uri }} style={{ width: 90, height: 90, borderRadius: 45 }} />
+          ) : (
+            <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+          )}
         </TouchableOpacity>
       </View>
       <View style={{ zIndex: 10 }}> 
@@ -304,6 +398,7 @@ export default function CadastroBarraqueiro() {
         <Text style={styles.textoBotao}>Continuar</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

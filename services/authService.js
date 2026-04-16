@@ -2,8 +2,13 @@ import api from './api';
 
 export const authService = {
   // 1. CADASTRO (Rota única conforme seu Swagger)
-  register: async (userData) => {
-    return api.post('/auth/signup', userData);
+  
+  register: async (formData) => {
+    return api.post('/auth/signup', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
   // 2. VERIFICAÇÃO DE E-MAIL (Rota: /auth/signup-otp conforme Swagger)
