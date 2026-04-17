@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform  } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform  } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '../../../services/authService';
+import * as ImagePicker from 'expo-image-picker';
 
+interface FotoProps {
+  uri: string;
+  name?: string;
+  type?: string;
+}
 
 export default function CadastroAmbulante() {
   const [nome, setNome] = useState('');
@@ -13,7 +19,7 @@ export default function CadastroAmbulante() {
   const [verSenha, setVerSenha] = useState(false);
   const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
   const [exibirOpcoesEmail, setExibirOpcoesEmail] = useState(false);
-  const [foto, setFoto] = useState(null); // Vai ser opcional?
+  const [foto, setFoto] = useState<FotoProps | null>(null); // Vai ser opcional?
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
   const [carregando, setCarregando] = useState(false);
@@ -57,45 +63,107 @@ export default function CadastroAmbulante() {
   const senhasDiferentes = confirmarSenha.length > 0 && senha !== confirmarSenha;
 
   // Função de envio para a api
+  
   const handleRegistro = async () => {
     setCarregando(true);
+
+    const formData = new FormData();
+
+    formData.append('nome', nome.trim());
+    formData.append('email', emailExibicao);
+    formData.append('password', senha);
+    formData.append('role', 'AMBULANTE');
+    formData.append('cpf', cpf.replace(/\D/g, ''));
+    formData.append('telefone', telefone.replace(/\D/g, ''));
+
+    if (foto) {
+      formData.append('foto', {
+        uri: foto.uri, 
+        name: 'photo.jpg',
+        type: 'image/jpeg',
+      } as any);
+    }
+
     try {
-      const payload = {
-        nome: nome,
-        email: emailExibicao,
-        password: senha,
-        role: 'AMBULANTE', 
-        cpf: cpf.replace(/\D/g, ''), 
-        telefone: telefone.replace(/\D/g, ''), 
-      };
+      const response = await authService.register(formData);
 
-      console.log("🟢 Iniciando chamada de registro...");
-      
-      // Chamada para o serviço
-      await authService.register(payload);
-      
-      // Se chegou aqui, o back-end retornou 200/201. 
-      // O Axios joga QUALQUER erro (400, 422, 500) direto para o catch abaixo.
-      
-      console.log("🟢 Registro concluído com sucesso, navegando...");
-
-      router.push({
-        pathname: '/(auth)/verificar-token', 
-        params: { email: emailExibicao, origem: 'cadastro' }
-      });
-
+      if (response.status === 200 || response.status === 201) {
+        router.push({
+          pathname: '/(auth)/verificar-token',
+          params: { email: emailExibicao, origem: 'cadastro' }
+        });
+      }
     } catch (error: any) {
-      console.log("🔴 ERRO NO CADASTRO:", error.response?.data || error.message);
-      
-      // Pega a mensagem real vinda do servidor ou uma padrão
-      const mensagemErro = error.response?.data?.detail;
-      
-      Alert.alert(
-        "Atenção", 
-        Array.isArray(mensagemErro) ? mensagemErro[0].msg : (mensagemErro || "Erro ao conectar com o servidor")
-      );
+      console.log("ERRO NO REGISTRO:", error.response?.data);
+      const msg = error.response?.data?.detail || "Erro ao realizar cadastro.";
+      Alert.alert("Atenção", msg);
     } finally {
       setCarregando(false);
+    }
+  };
+  
+  const selecionarImagem = () => {
+    Alert.alert(
+      "Selecionar Foto",
+      "De onde você deseja adicionar a foto?",
+      [
+        {
+          text: "Tirar Foto (Câmera)",
+          onPress: abrirCamera,
+        },
+        {
+          text: "Escolher da Galeria",
+          onPress: abrirGaleria,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const abrirCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão necessária", "Precisamos de acesso à câmera.");
+      return;
+    }
+
+    const resultado = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!resultado.canceled) {
+      setFoto({
+        uri: resultado.assets[0].uri,
+        name: 'camera_photo.jpg',
+        type: 'image/jpeg',
+      });
+    }
+  };
+
+  const abrirGaleria = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão necessária", "Precisamos de acesso às fotos.");
+      return;
+    }
+
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!resultado.canceled) {
+      setFoto({
+        uri: resultado.assets[0].uri,
+        name: 'gallery_photo.jpg',
+        type: 'image/jpeg',
+      });
     }
   };
 
@@ -118,8 +186,16 @@ export default function CadastroAmbulante() {
         </View>
 
         <View style={styles.containerFoto}>
-          <TouchableOpacity style={styles.circuloFoto} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+          <TouchableOpacity 
+            style={styles.circuloFoto} 
+            activeOpacity={0.8}
+            onPress={selecionarImagem} 
+          >
+            {foto ? (
+              <Image source={{ uri: foto.uri }} style={{ width: 90, height: 90, borderRadius: 45 }} />
+            ) : (
+              <MaterialCommunityIcons name="camera-plus-outline" size={35} color="#b2a199" />
+            )}
           </TouchableOpacity>
         </View>
         <View style={{ zIndex: 10 }}> 

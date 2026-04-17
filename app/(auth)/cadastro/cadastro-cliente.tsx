@@ -33,38 +33,36 @@ export default function CadastroCliente() {
 
   // Registro no banco
   const handleRegistro = async () => {
-  setCarregando(true);
-  console.log("PAYLOAD QUE SERÁ ENVIADO:", {
-    nome: nome,
-    email: emailExibicao,
-    password: senha,
-    role: role || 'CLIENTE'
-  });
-  try {
-    // Montamos o objeto exatamente como a API espera
-    const payload = {
-      nome: nome,
-      email: emailExibicao,
-      password: senha,
-      role: role || 'cliente' // 'role' veio do useLocalSearchParams
-    };
+    if (carregando) return;
+    setCarregando(true);
 
-    // Chamada para a função que você acabou de criar
-    const response = await authService.register(payload);
-    if (response.status === 201 || response.status === 200) {
-      router.push({
-        pathname: '/(auth)/verificar-token',
-        params: { email: emailExibicao, origem: 'cadastro' } 
-      });
+    const formData = new FormData();
+
+    formData.append('nome', nome.trim());
+    formData.append('email', emailExibicao);
+    formData.append('password', senha);
+    formData.append('role', 'CLIENTE');
+
+    try {
+      const response = await authService.register(formData);
+
+      if (response.status === 201 || response.status === 200) {
+        router.push({
+          pathname: '/(auth)/verificar-token',
+          params: { email: emailExibicao, origem: 'cadastro' } 
+        });
+      }
+    } catch (error: any) {
+      console.log("ERRO NO REGISTRO:", error.response?.data);
+      
+      const detalhe = error.response?.data?.detail;
+      const mensagem = Array.isArray(detalhe) ? detalhe[0].msg : (detalhe || "Erro ao realizar cadastro.");
+      
+      Alert.alert("Erro", mensagem);
+    } finally {
+      setCarregando(false);
     }
-  } catch (error:any) {
-    const mensagem = error.response?.data?.message || "Erro de conexão";
-    Alert.alert("Erro", mensagem);
-    console.log("ERRO AO REGISTRAR:", error.response?.data || error.message);
-  } finally {
-    setCarregando(false);
-  }
-};
+  };
 
   return (
     <ScrollView 
