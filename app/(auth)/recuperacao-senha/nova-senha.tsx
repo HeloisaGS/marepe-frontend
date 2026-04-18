@@ -83,26 +83,37 @@ export default function DefinirSenha() {
 
       const msgLower = String(msgBackend).toLowerCase();
       const semInternet =
-        error.message?.includes('Network Error') ||
-        error.message?.includes('timeout') ||
-        !error.response;
+        error?.message?.includes('Network Error') ||
+        error?.message?.includes('timeout') ||
+        !error?.response;
 
       if (semInternet) {
-        Alert.alert('Erro', 'Sem conexão com a internet. Verifique seu sinal e tente novamente.');
+        Alert.alert('Erro', 'Problema de conexão. Verifique sua internet e tente novamente.');
       } else if (
         msgLower.includes('expired') ||
-        msgLower.includes('expirado')
+        msgLower.includes('expirado') ||
+        msgLower.includes('otp expirado') ||
+        msgLower.includes('token expirado')
       ) {
         Alert.alert('Erro', 'Este código expirou. Solicite um novo código.');
       } else if (
-        msgLower.includes('not found') ||
-        msgLower.includes('não encontrado') ||
-        msgLower.includes('não encontrada') ||
-        (msgLower.includes('email') && msgLower.includes('conta'))
+        msgLower.includes('invalid') ||
+        msgLower.includes('inválido') ||
+        msgLower.includes('validation') ||
+        msgLower.includes('validação') ||
+        msgLower.includes('token') ||
+        msgLower.includes('otp') ||
+        msgLower.includes('código')
       ) {
-        Alert.alert('Erro', 'Não encontramos uma conta associada a este e-mail.');
+        Alert.alert(
+          'Erro',
+          'Falha de validação. Verifique o código informado e tente novamente.'
+        );
       } else {
-        Alert.alert('Erro', msgBackend || 'Não foi possível redefinir a senha.');
+        Alert.alert(
+          'Erro',
+          'Erro ao redefinir senha. Tente novamente.'
+        );
       }
     } finally {
       setCarregando(false);
@@ -147,7 +158,7 @@ export default function DefinirSenha() {
             </View>
             {senhaCurta && (
               <Text style={styles.textoErro}>
-                 A senha deve possuir no mínimo 8 caracteres.
+                A senha deve possuir no mínimo 8 caracteres.
               </Text>
             )}
           </View>
