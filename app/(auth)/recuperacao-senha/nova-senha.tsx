@@ -44,12 +44,12 @@ export default function DefinirSenha() {
 
   const handleRedefinirSenha = async () => {
     if (!senhaValida) {
-      Alert.alert('Erro', 'A senha deve ter pelo menos 8 caracteres.');
+      Alert.alert('Erro', 'A senha deve possuir no mínimo 8 caracteres.');
       return;
     }
 
     if (!senhasIguais) {
-      Alert.alert('Erro', 'As senhas não coincidem.');
+      Alert.alert('Erro', 'As senhas informadas não coincidem.');
       return;
     }
 
@@ -147,7 +147,7 @@ export default function DefinirSenha() {
             </View>
             {senhaCurta && (
               <Text style={styles.textoErro}>
-                A senha deve ter pelo menos 8 caracteres.
+                 A senha deve possuir no mínimo 8 caracteres.
               </Text>
             )}
           </View>
@@ -178,7 +178,7 @@ export default function DefinirSenha() {
           </View>
 
           <Pressable
-            disabled={!senhasConferem || carregando}
+            disabled={carregando}
             onPress={handleRedefinirSenha}
             style={({ pressed }) => [
               styles.botaoContinuar,
