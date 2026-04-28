@@ -25,8 +25,18 @@ export default function Login() {
       const response = await authService.login(email.trim(), senha);
       console.log('Resposta do login:', response.data);
 
+      // pega o perfil real do usuário salvo no metadata
+      const role =
+        response?.data?.user?.user_metadata?.role ||
+        response?.data?.session?.user?.user_metadata?.role ||
+        '';
+      // teste
+      console.log('Role extraído do login:', role);
 
-      router.push('/(auth)/sucesso');
+      router.push({
+        pathname: '/(auth)/sucesso',
+        params: { role },
+      });
 
     } catch (error: any) {
       console.log('Erro ao logar:', error.response?.data || error.message);
