@@ -48,25 +48,21 @@ export default function Sucesso() {
       await salvarPermissao(true);
 
       const roleNormalizado = roleRecebido.toUpperCase();
-      // TROCAR AS ROTAS PARA TELAS CERTAS.
-      // redirecionamento baseado no perfil
+      // Mudança nas rotas
       if (roleNormalizado === 'CLIENTE') {
-        router.replace('/(auth)/login');
+        router.replace('/(cliente)/(tabs)');
         return;
       }
-
-      if (
-        roleNormalizado === 'AMBULANTE' ||
-        roleNormalizado === 'BARRAQUEIRO' ||
-        roleNormalizado === 'VENDEDOR'
-      ) {
-        //TROCAR
-        router.replace('/(auth)/login');
+      if (roleNormalizado === 'AMBULANTE'){
+        router.replace('/(ambulante)/(tabs)');
         return;
       }
-
+      if (roleNormalizado === 'BARRAQUEIRO'){
+        router.replace('/(barraca)/(tabs)');
+        return;
+      }
       // fallback TROCAR
-      router.replace('/(auth)/login');
+      router.replace('/(auth)');
     };
     // botao voltar
     const backSubscription = BackHandler.addEventListener(

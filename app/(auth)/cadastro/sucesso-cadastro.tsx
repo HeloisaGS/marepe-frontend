@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import LogoMaré from '../../../assets/images/logo.png';
 
 export default function SucessoCadastro() {
-  // Estados: 'carregando' | 'sucesso' | 'bem-vindo'
+  const { nome, role } = useLocalSearchParams();
   const [etapa, setEtapa] = useState<'carregando' | 'sucesso' | 'bem-vindo'>('carregando');
 
-  // Simulação de fluxo (Apenas para você ver no Front por enquanto)
   useEffect(() => {
     if (etapa === 'carregando') {
-      const timerSucesso = setTimeout(() => setEtapa('sucesso'), 2000); // 2s carregando
+      const timerSucesso = setTimeout(() => setEtapa('sucesso'), 2000); 
       return () => clearTimeout(timerSucesso);
     }
     
     if (etapa === 'sucesso') {
-      const timerBoasVindas = setTimeout(() => setEtapa('bem-vindo'), 1500); // 1.5s em sucesso
+      const timerBoasVindas = setTimeout(() => setEtapa('bem-vindo'), 1500); 
       return () => clearTimeout(timerBoasVindas);
+    }
+
+    if (etapa === 'bem-vindo') {
+      const timerFinal = setTimeout(() => {
+        router.replace({
+          pathname: '/(auth)/sucesso', 
+          params: { role: role } 
+        });
+      }, 2500); 
+      return () => clearTimeout(timerFinal);
     }
   }, [etapa]);
 

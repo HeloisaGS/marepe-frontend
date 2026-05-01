@@ -12,7 +12,7 @@ export default function Token() {
   const [timer, setTimer] = useState(30);
   const inputs = useRef<(TextInput | null)[]>([]);
   const [erro, setErro] = useState('');
-  const { origem, email, emailDigitado } = useLocalSearchParams();// Pegue o email aqui
+  const { origem, email, emailDigitado, nome, role } = useLocalSearchParams();// Pegue o email aqui
   const [carregando, setCarregando] = useState(false);
 
   // Lógica do cronômetro
@@ -60,7 +60,13 @@ export default function Token() {
           const response = await authService.verifyEmail(emailString, tokenDigitado);
           
           if (response.status === 200 || response.status === 201) {
-            router.push('/(auth)/sucesso');
+            router.push({
+              pathname: '/(auth)/cadastro/sucesso-cadastro',
+              params: { 
+                nome: nome, // Passando o nome que veio da tela anterior
+                role: role  // Passando o perfil (AMBULANTE, CLIENTE, etc)
+              }
+            });
           }
         } 
         else {

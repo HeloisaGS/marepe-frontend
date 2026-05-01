@@ -12,6 +12,9 @@ export default function AuthLayout() {
       {/* Rotas para telas inicial e de login */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      {/* Rotas para pedir localização */}
+      <Stack.Screen name="sucesso" options={{ headerShown: false }} />
+      <Stack.Screen name="bloqueio-localizacao" options={{ headerShown: false }} />
       {/* Rotas para esqueceu senha */}
       <Stack.Screen name="recuperacao-senha/index" options={{ headerShown: false }} />
       <Stack.Screen name="recuperacao-senha/nova-senha" options={{ headerShown: false }} />
