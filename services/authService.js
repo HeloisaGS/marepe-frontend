@@ -43,11 +43,16 @@ export const authService = {
     return api.post('/auth/forgot-password', { email });
   },
 
-  // 7. RESETAR SENHA (Nova Senha)
-  resetPassword: async (email, token, newPassword) => {
+  // 7. Validar OTP
+  verifyResetToken: async (email, token) => {
+    return api.post('/auth/verify-recovery-otp', { email, token });
+  },
+
+  // 8. RESETAR SENHA
+  resetPassword: async (accessToken, refreshToken, newPassword) => {
     return api.post('/auth/reset-password', { 
-      email, 
-      token, 
+      access_token: accessToken, 
+      refresh_token: refreshToken, 
       new_password: newPassword 
     });
   },

@@ -26,14 +26,8 @@ export default function DefinirSenha() {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
-  const { email, emailDigitado, token } = useLocalSearchParams();
-
-  const emailFinal = Array.isArray(email)
-    ? email[0]
-    : email || (Array.isArray(emailDigitado) ? emailDigitado[0] : emailDigitado);
-
-  const tokenFinal = Array.isArray(token) ? token[0] : token;
-
+  const { accessToken, refreshToken } = useLocalSearchParams();
+  
 
   const senhaValida = senha.trim().length >= 8;
   const senhasIguais = senha === confirmarSenha;
@@ -53,25 +47,22 @@ export default function DefinirSenha() {
       return;
     }
 
-    if (!emailFinal || !tokenFinal) {
-      Alert.alert('Erro', 'E-mail ou token não encontrados. Volte e solicite o código novamente.');
+    if (!accessToken) {
+      Alert.alert('Erro', 'Sessão expirada. Solicite um novo código.');
       return;
     }
 
     setCarregando(true);
 
     try {
-      const response = await authService.resetPassword(emailFinal, tokenFinal, senha);
-
-      console.log('Senha redefinida:', response.data);
-
-      router.replace({
-        pathname: '/(auth)/sucesso',
-        params: {
-          emailDigitado: emailFinal,
-          senhaDigitada: senha,
-        },
-      });
+      await authService.resetPassword(
+        accessToken as string, 
+        refreshToken as string, 
+        senha
+      );
+      Alert.alert("Sucesso", "Sua senha foi alterada!");
+      router.replace('/(auth)/login');
+      
     } catch (error: any) {
       console.log('Erro ao redefinir:', error.response?.data || error.message);
 

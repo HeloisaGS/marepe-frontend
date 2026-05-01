@@ -64,9 +64,16 @@ export default function Token() {
           }
         } 
         else {
+          // Validação
+          const response = await authService.verifyResetToken(emailString, tokenDigitado);
+          const { access_token, refresh_token } = response.data;
+          
           router.push({
             pathname: '/(auth)/recuperacao-senha/nova-senha',
-            params: { email: emailString, token: tokenDigitado }
+            params: { 
+              accessToken: access_token, 
+              refreshToken: refresh_token 
+            }
           });
         }
       } catch (error: any) {
