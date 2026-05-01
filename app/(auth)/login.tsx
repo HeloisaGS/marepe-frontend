@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert, } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert,ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../assets/images/logo.png';
@@ -55,8 +55,12 @@ export default function Login() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}        style={{ flex: 1 }}
+      >
+        <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.container}>
 
@@ -143,6 +147,7 @@ export default function Login() {
           </View>
 
         </View>
+        </ScrollView>
       </KeyboardAvoidingView >
     </TouchableWithoutFeedback>
   );
@@ -154,7 +159,16 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
     paddingHorizontal: 25,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+    
+  },
+  scrollContainer: {
+    flexGrow: 1, // Permite que o scroll ocupe a tela toda
+  },
+  innerContainer: {
+    flex: 1,
+    paddingVertical: 50,
+    paddingHorizontal: 25,
+    justifyContent: 'center', // Centraliza apenas o conteúdo interno
   },
   logoContainer: {
     alignItems: 'center',

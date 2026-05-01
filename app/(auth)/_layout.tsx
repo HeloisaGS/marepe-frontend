@@ -8,6 +8,7 @@ export default function AuthLayout() {
       <Stack.Screen name="cadastro/cadastro-ambulante" options={{ headerShown: false }} />
       <Stack.Screen name="cadastro/cadastro-barraqueiro" options={{ headerShown: false }} />
       <Stack.Screen name="cadastro/cadastro-cliente" options={{ headerShown: false }} />
+      <Stack.Screen name="cadastro/sucesso-cadastro" options={{ headerShown: false }} />
       {/* Rotas para telas inicial e de login */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
