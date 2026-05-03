@@ -5,13 +5,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   BackHandler,
-  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-//tela de permissao
 export default function Sucesso() {
   const { role } = useLocalSearchParams();
   const perfil = Array.isArray(role) ? role[0] : role || '';
@@ -25,53 +23,67 @@ export default function Sucesso() {
   useEffect(() => {
     console.log('Role recebido pela rota:', role);
     console.log('Perfil tratado:', perfil);
-    const salvarPermissao = async (permitido: boolean) => {
-      try {
-        await AsyncStorage.setItem('gps_permitido', JSON.stringify(permitido));
-        console.log('Permissão salva:', permitido);
-      } catch (error) {
-        console.log('Erro ao salvar permissão:', error);
-      }
-    };
-    // Bloqueia 
-    const irParaBloqueio = async () => {
-      if (redirecionouRef.current) return;
-      redirecionouRef.current = true;
-      await salvarPermissao(false);
 
-      router.replace('/(auth)/bloqueio-localizacao');
+    const salvarPermissao = async () => {
+      await AsyncStorage.setItem('gps_permitido', 'true');
+      console.log('Permissão salva: true');
+    };
+
+    const apagarPermissao = async () => {
+      await AsyncStorage.removeItem('gps_permitido');
+      console.log('Permissão removida');
+    };
+
+    const irParaBloqueio = async (motivo = 'negada') => {
+      if (redirecionouRef.current) return;
+
+      redirecionouRef.current = true;
+
+      // NÃO salva false
+      await apagarPermissao();
+
+      router.replace({
+        pathname: '/(auth)/bloqueio-localizacao',
+        params: {
+          role: perfil,
+          motivo,
+        },
+      });
     };
 
     const liberarFluxo = async (roleRecebido: string) => {
       if (redirecionouRef.current) return;
+
       redirecionouRef.current = true;
-      await salvarPermissao(true);
 
       const roleNormalizado = roleRecebido.toUpperCase();
-      // Mudança nas rotas
+
       if (roleNormalizado === 'CLIENTE') {
         router.replace('/(cliente)/(tabs)');
         return;
       }
-      if (roleNormalizado === 'AMBULANTE'){
+
+      if (roleNormalizado === 'AMBULANTE') {
         router.replace('/(ambulante)/(tabs)');
         return;
       }
-      if (roleNormalizado === 'BARRAQUEIRO'){
+
+      if (roleNormalizado === 'BARRAQUEIRO') {
         router.replace('/(barraca)/(tabs)');
         return;
       }
-      // fallback TROCAR
+
       router.replace('/(auth)');
     };
-    // botao voltar
+
     const backSubscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
         if (modalAbertoRef.current) {
-          irParaBloqueio();
+          irParaBloqueio('negada');
           return true;
         }
+
         return false;
       }
     );
@@ -81,41 +93,55 @@ export default function Sucesso() {
         setMensagem('Verificando permissão de localização...');
 
         const permissaoAtual = await Location.getForegroundPermissionsAsync();
+        console.log('Permissão atual:', permissaoAtual);
 
-        if (permissaoAtual.status === 'granted') {
+        const permissaoSalva = await AsyncStorage.getItem('gps_permitido');
+
+        if (
+          permissaoSalva === 'true' &&
+          permissaoAtual.status === 'granted'
+        ) {
           setProcessando(false);
           setMensagem('Permissão já concedida. Entrando...');
           await liberarFluxo(perfil);
           return;
         }
 
-        if (permissaoAtual.canAskAgain === false) {
-          setProcessando(false);
-          setMensagem('Permissão negada anteriormente.');
-          await irParaBloqueio();
-          return;
+        if (permissaoAtual.status !== 'granted') {
+          await apagarPermissao();
         }
 
         setMensagem('Solicitando permissão de localização...');
         modalAbertoRef.current = true;
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const resposta = await Location.requestForegroundPermissionsAsync();
 
         modalAbertoRef.current = false;
         setProcessando(false);
 
-        if (status === 'granted') {
+        console.log('Resposta da permissão:', resposta);
+
+        if (resposta.status === 'granted') {
+          await salvarPermissao();
+
           setMensagem('Permissão concedida. Entrando...');
           await liberarFluxo(perfil);
           return;
         }
 
-        await irParaBloqueio();
+        if (resposta.status === 'denied' && resposta.canAskAgain === false) {
+          await irParaBloqueio('configuracoes');
+          return;
+        }
+
+        await irParaBloqueio('negada');
       } catch (error) {
         console.log('Erro ao pedir localização:', error);
+
         modalAbertoRef.current = false;
         setProcessando(false);
-        await irParaBloqueio();
+
+        await irParaBloqueio('erro');
       }
     };
 
@@ -124,12 +150,14 @@ export default function Sucesso() {
     return () => {
       backSubscription.remove();
     };
-  }, [perfil]);
+  }, [perfil, role]);
 
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#000" />
+
       <Text style={styles.titulo}>MaréPE</Text>
+
       <Text style={styles.texto}>{mensagem}</Text>
 
       {processando && (
