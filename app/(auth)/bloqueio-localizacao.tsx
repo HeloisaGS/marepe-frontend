@@ -5,28 +5,39 @@ import {
   StyleSheet,
   Image,
   BackHandler,
-  Platform,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import LogoMaré from '../../assets/images/logo.png';
 
 export default function BloqueioLocalizacao() {
+  const { role, motivo } = useLocalSearchParams();
+
+  const perfil = Array.isArray(role) ? role[0] : role || '';
+  const motivoTratado = Array.isArray(motivo) ? motivo[0] : motivo || '';
+
   useEffect(() => {
     const backSubscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => true
     );
 
-    const timer = setTimeout(() => {
-      if (Platform.OS === 'android') {
-        BackHandler.exitApp();
-      }
-    }, 4000);
-
     return () => {
       backSubscription.remove();
-      clearTimeout(timer);
     };
   }, []);
+
+  const tentarNovamente = () => {
+    router.replace({
+      pathname: '/(auth)/sucesso',
+      params: { role: perfil },
+    });
+  };
+
+  const abrirConfiguracoes = () => {
+    Linking.openSettings();
+  };
 
   return (
     <View style={styles.container}>
@@ -39,17 +50,25 @@ export default function BloqueioLocalizacao() {
         <Text style={styles.titulo}>Erro de localização</Text>
 
         <Text style={styles.mensagem}>
-          O MaréPE precisa acessar sua localização para funcionar. Acesso negado.
+          O MaréPE precisa acessar sua localização para funcionar.
         </Text>
 
         <Text style={styles.info}>
-          Feche o aplicativo e permita a localização para continuar.
+          {motivoTratado === 'configuracoes'
+            ? 'Vá em Configurações e permita o acesso à localização.'
+            : 'Permissão negada. Toque em tentar novamente para solicitar a localização outra vez.'}
         </Text>
       </View>
 
-      <View style={styles.botaoFake}>
-        <Text style={styles.textoBotao}>Encerrando...</Text>
-      </View>
+      {motivoTratado === 'configuracoes' ? (
+        <TouchableOpacity style={styles.botao} onPress={abrirConfiguracoes}>
+          <Text style={styles.textoBotao}>Abrir configurações</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.botao} onPress={tentarNovamente}>
+          <Text style={styles.textoBotao}>Tentar novamente</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -105,15 +124,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  botaoFake: {
-    backgroundColor: '#EAEAEA',
+  botao: {
+    backgroundColor: '#221A15',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 25,
     alignSelf: 'center',
   },
   textoBotao: {
-    color: '#999',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
