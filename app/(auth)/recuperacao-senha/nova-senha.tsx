@@ -61,7 +61,7 @@ export default function DefinirSenha() {
         senha
       );
       Alert.alert("Sucesso", "Sua senha foi alterada!");
-      router.replace('/(auth)/login');
+      router.replace('/');
       
     } catch (error: any) {
       console.log('Erro ao redefinir:', error.response?.data || error.message);
@@ -81,12 +81,20 @@ export default function DefinirSenha() {
       if (semInternet) {
         Alert.alert('Erro', 'Problema de conexão. Verifique sua internet e tente novamente.');
       } else if (
+        msgLower.includes('different from the old password') ||
+        msgLower.includes('senha') && msgLower.includes('antiga')
+      ) {
+        Alert.alert('Erro', 'A nova senha precisa ser diferente da senha antiga.');
+      } else if (
         msgLower.includes('expired') ||
         msgLower.includes('expirado') ||
         msgLower.includes('otp expirado') ||
         msgLower.includes('token expirado')
       ) {
-        Alert.alert('Erro', 'Este código expirou. Solicite um novo código.');
+        Alert.alert(
+          'Erro',
+          'Este código expirou. Solicite um novo código.'
+        );
       } else if (
         msgLower.includes('invalid') ||
         msgLower.includes('inválido') ||
@@ -100,7 +108,9 @@ export default function DefinirSenha() {
           'Erro',
           'Falha de validação. Verifique o código informado e tente novamente.'
         );
-      } else {
+      }else if (msgBackend) {
+        Alert.alert('Erro', String(msgBackend));
+      }else {
         Alert.alert(
           'Erro',
           'Erro ao redefinir senha. Tente novamente.'
