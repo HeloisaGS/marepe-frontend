@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,40 +15,87 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as TaskManager from 'expo-task-manager';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+const LOCATION_TRACKING_TASK = 'LOCATION_TRACKING_TASK';
+
+TaskManager.defineTask(LOCATION_TRACKING_TASK, ({ data, error }: any) => {
+  if (error) {
+    console.log("Erro na tarefa de background:", error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    // O console.log aqui vai mostrar que está capturando em background
+    console.log("Coordenada Background:", locations[0].coords.latitude);
+  }
+});
+
+
 export default function HomeAmbulante() {
   const [isAtivo, setIsAtivo] = useState(false);
   const [expandido, setExpandido] = useState(true);
   const [modalPermissaoVisivel, setModalPermissaoVisivel] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  // para localização
+  const [subscription, setSubscription] = useState<Location.LocationSubscription | null>(null);
+  const [gpsRuim, setGpsRuim] = useState(false); 
 
   const alternarCard = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandido(!expandido);
   };
 
+  const iniciarTracking = async () => {
+    try {
+      // Verifica se já não está rodando para não abrir duas notificações
+      const jaEstaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+      if (jaEstaRodando) return;
+
+      await Location.startLocationUpdatesAsync(LOCATION_TRACKING_TASK, {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 30000, // 30 segundos
+        distanceInterval: 0,
+        // ESTA É A PARTE DA NOTIFICAÇÃO (Tarefa DEV-FRONT)
+        foregroundService: {
+          notificationTitle: "MaréPE",
+          notificationBody: "MaréPE está rastreando sua posição para os clientes",
+          notificationColor: "#E05A3D",
+        },
+        pausesLocationUpdatesAutomatically: false,
+      });
+
+      console.log("✅ Notificação e rastreio ativos!");
+    } catch (error) {
+      console.log("Erro ao iniciar rastreio:", error);
+    }
+  };
   //  online/off
   const gerenciarStatusPraia = async (querFicarOnline: boolean) => {
     if (querFicarOnline) {
-      // verifica se ele já tem a permissão de Background
       const bg = await Location.getBackgroundPermissionsAsync();
-      
       if (bg.status === 'granted') {
-        // ja tem - modal
         setIsAtivo(true); 
+        iniciarTracking();
       } else {
-        // se não tem SEMPRE abre o modal explicativo primeiro
         setModalPermissaoVisivel(true); 
       }
     } else {
-      // Se ele clicar em "Não estou na praia", desliga a chave.
       setIsAtivo(false);
+      setGpsRuim(false);
+
+      const estaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+      if (estaRodando) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+        console.log("Rastreio parado e notificação removida");
+      }
     }
   };
-
  // botao entendi do modal, que chama a permissão nativa do celular
   const aceitarModalEPermitir = () => {
     setModalPermissaoVisivel(false);
@@ -101,11 +148,57 @@ export default function HomeAmbulante() {
     }, 500); 
   };
 
+  
+  useEffect(() => {
+  (async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão negada", "Precisamos do acesso ao GPS para mostrar sua posição.");
+      return;
+    }
+
+    let locationActual = await Location.getCurrentPositionAsync({});
+    setLocation(locationActual);
+  })();
+}, []);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      
-      <View style={{ flex: 1 }} />
+      {/* Container do Mapa */}
+      <View style={{ flex: 1 }}> 
+        {/* 1. O MAPA (Ocupa tudo) */}
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={StyleSheet.absoluteFillObject}
+          showsUserLocation={true}
+          region={{
+            latitude: location ? location.coords.latitude : -8.0631,
+            longitude: location ? location.coords.longitude : -34.8711,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }}
+        >
+          {location && (
+            <Marker
+              coordinate={{ 
+                latitude: location.coords.latitude, 
+                longitude: location.coords.longitude 
+              }}
+              title="Minha Localização"
+            >
+              <MaterialCommunityIcons name="map-marker-account" size={35} color="#E05A3D" />
+            </Marker>
+          )}
+        </MapView>
 
+        {/* 2. A BARRA (Dentro da View do mapa, mas DEPOIS do MapView) */}
+        {gpsRuim && (
+          <View style={styles.barraAlertaAmarela}>
+            <MaterialCommunityIcons name="alert" size={16} color="#856404" />
+            <Text style={styles.textoAlerta}>Sinal de GPS fraco. Aproxime-se do mar.</Text>
+          </View>
+        )}
+      </View>
       {/* modal*/}
       <Modal
         animationType="fade"
@@ -353,4 +446,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18, 
   },
+
+  // Mapas e notificações
+  barraAlertaAmarela: {
+  position: 'absolute',
+  top: 10,
+  left: 20,
+  right: 20,
+  backgroundColor: '#FFF3CD',
+  padding: 10,
+  borderRadius: 8,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 1,
+  borderColor: '#FFEEBA',
+  elevation: 3,
+},
+textoAlerta: {
+  color: '#856404',
+  fontSize: 12,
+  fontWeight: '600',
+  marginLeft: 8,
+},
+
 });
