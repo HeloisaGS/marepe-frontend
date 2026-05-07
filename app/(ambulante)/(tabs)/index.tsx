@@ -16,10 +16,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as TaskManager from 'expo-task-manager';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const LOCATION_TRACKING_TASK = 'LOCATION_TRACKING_TASK';
+
+TaskManager.defineTask(LOCATION_TRACKING_TASK, ({ data, error }: any) => {
+  if (error) {
+    console.log("Erro na tarefa de background:", error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    // O console.log aqui vai mostrar que está capturando em background
+    console.log("Coordenada Background:", locations[0].coords.latitude);
+  }
+});
+
 
 export default function HomeAmbulante() {
   const [isAtivo, setIsAtivo] = useState(false);
@@ -36,53 +52,50 @@ export default function HomeAmbulante() {
   };
 
   const iniciarTracking = async () => {
-    // Limpa qualquer rastro anterior para não bugar
-    if (subscription) subscription.remove();
+    try {
+      // Verifica se já não está rodando para não abrir duas notificações
+      const jaEstaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+      if (jaEstaRodando) return;
 
-    const sub = await Location.watchPositionAsync(
-      {
+      await Location.startLocationUpdatesAsync(LOCATION_TRACKING_TASK, {
         accuracy: Location.Accuracy.High,
-        timeInterval: 30000, // 30 segundos 
-        distanceInterval: 0, // ou 10 metros
-      },
-      (newLocation) => {
-        setLocation(newLocation);
-        
-        // Lógica da Barra Amarela (Tarefa 3)
-        const precisao = newLocation.coords.accuracy || 0;
-        setGpsRuim(precisao > 50);
+        timeInterval: 30000, // 30 segundos
+        distanceInterval: 0,
+        // ESTA É A PARTE DA NOTIFICAÇÃO (Tarefa DEV-FRONT)
+        foregroundService: {
+          notificationTitle: "MaréPE",
+          notificationBody: "MaréPE está rastreando sua posição para os clientes",
+          notificationColor: "#E05A3D",
+        },
+        pausesLocationUpdatesAutomatically: false,
+      });
 
-        console.log("Coordenada capturada:", newLocation.coords.latitude);
-      }
-    );
-    setSubscription(sub);
+      console.log("✅ Notificação e rastreio ativos!");
+    } catch (error) {
+      console.log("Erro ao iniciar rastreio:", error);
+    }
   };
-
   //  online/off
   const gerenciarStatusPraia = async (querFicarOnline: boolean) => {
     if (querFicarOnline) {
-      // verifica se ele já tem a permissão de Background
       const bg = await Location.getBackgroundPermissionsAsync();
-      
       if (bg.status === 'granted') {
-        // ja tem - modal
         setIsAtivo(true); 
         iniciarTracking();
       } else {
-        // se não tem SEMPRE abre o modal explicativo primeiro
         setModalPermissaoVisivel(true); 
       }
     } else {
-      // Se ele clicar em "Não estou na praia", desliga a chave.
       setIsAtivo(false);
-      if (subscription) {
-        subscription.remove();
-        setSubscription(null);
-      }
       setGpsRuim(false);
+
+      const estaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+      if (estaRodando) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+        console.log("Rastreio parado e notificação removida");
+      }
     }
   };
-
  // botao entendi do modal, que chama a permissão nativa do celular
   const aceitarModalEPermitir = () => {
     setModalPermissaoVisivel(false);
