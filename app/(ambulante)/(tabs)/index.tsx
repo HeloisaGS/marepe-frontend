@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -24,10 +25,37 @@ export default function HomeAmbulante() {
   const [isAtivo, setIsAtivo] = useState(false);
   const [expandido, setExpandido] = useState(true);
   const [modalPermissaoVisivel, setModalPermissaoVisivel] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  // para localização
+  const [subscription, setSubscription] = useState<Location.LocationSubscription | null>(null);
+  const [gpsRuim, setGpsRuim] = useState(false); 
 
   const alternarCard = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandido(!expandido);
+  };
+
+  const iniciarTracking = async () => {
+    // Limpa qualquer rastro anterior para não bugar
+    if (subscription) subscription.remove();
+
+    const sub = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 30000, // 30 segundos 
+        distanceInterval: 0, // ou 10 metros
+      },
+      (newLocation) => {
+        setLocation(newLocation);
+        
+        // Lógica da Barra Amarela (Tarefa 3)
+        const precisao = newLocation.coords.accuracy || 0;
+        setGpsRuim(precisao > 50);
+
+        console.log("Coordenada capturada:", newLocation.coords.latitude);
+      }
+    );
+    setSubscription(sub);
   };
 
   //  online/off
@@ -39,6 +67,7 @@ export default function HomeAmbulante() {
       if (bg.status === 'granted') {
         // ja tem - modal
         setIsAtivo(true); 
+        iniciarTracking();
       } else {
         // se não tem SEMPRE abre o modal explicativo primeiro
         setModalPermissaoVisivel(true); 
@@ -46,6 +75,11 @@ export default function HomeAmbulante() {
     } else {
       // Se ele clicar em "Não estou na praia", desliga a chave.
       setIsAtivo(false);
+      if (subscription) {
+        subscription.remove();
+        setSubscription(null);
+      }
+      setGpsRuim(false);
     }
   };
 
@@ -101,11 +135,57 @@ export default function HomeAmbulante() {
     }, 500); 
   };
 
+  
+  useEffect(() => {
+  (async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permissão negada", "Precisamos do acesso ao GPS para mostrar sua posição.");
+      return;
+    }
+
+    let locationActual = await Location.getCurrentPositionAsync({});
+    setLocation(locationActual);
+  })();
+}, []);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      
-      <View style={{ flex: 1 }} />
+      {/* Container do Mapa */}
+      <View style={{ flex: 1 }}> 
+        {/* 1. O MAPA (Ocupa tudo) */}
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={StyleSheet.absoluteFillObject}
+          showsUserLocation={true}
+          region={{
+            latitude: location ? location.coords.latitude : -8.0631,
+            longitude: location ? location.coords.longitude : -34.8711,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }}
+        >
+          {location && (
+            <Marker
+              coordinate={{ 
+                latitude: location.coords.latitude, 
+                longitude: location.coords.longitude 
+              }}
+              title="Minha Localização"
+            >
+              <MaterialCommunityIcons name="map-marker-account" size={35} color="#E05A3D" />
+            </Marker>
+          )}
+        </MapView>
 
+        {/* 2. A BARRA (Dentro da View do mapa, mas DEPOIS do MapView) */}
+        {gpsRuim && (
+          <View style={styles.barraAlertaAmarela}>
+            <MaterialCommunityIcons name="alert" size={16} color="#856404" />
+            <Text style={styles.textoAlerta}>Sinal de GPS fraco. Aproxime-se do mar.</Text>
+          </View>
+        )}
+      </View>
       {/* modal*/}
       <Modal
         animationType="fade"
@@ -353,4 +433,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18, 
   },
+
+  // Mapas e notificações
+  barraAlertaAmarela: {
+  position: 'absolute',
+  top: 10,
+  left: 20,
+  right: 20,
+  backgroundColor: '#FFF3CD',
+  padding: 10,
+  borderRadius: 8,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 1,
+  borderColor: '#FFEEBA',
+  elevation: 3,
+},
+textoAlerta: {
+  color: '#856404',
+  fontSize: 12,
+  fontWeight: '600',
+  marginLeft: 8,
+},
+
 });
