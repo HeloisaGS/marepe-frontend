@@ -7,6 +7,7 @@ export default function TabsBarracaLayout() {
       tabBarStyle: { backgroundColor: '#E95822' }, 
       tabBarActiveTintColor: '#FFF', 
       tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)', 
+      headerShown: false,
       
     }}>
       <Tabs.Screen name="index" 
