@@ -1,13 +1,13 @@
 import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function TabsClienteLayout() {
+export default function TabsBarracaLayout() {
   return (
     <Tabs screenOptions={{
       tabBarStyle: { backgroundColor: '#E95822' }, 
-      tabBarActiveTintColor: '#FFF',
+      tabBarActiveTintColor: '#FFF', 
       tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)', 
-
+      
     }}>
       <Tabs.Screen name="index" 
         options={{ 
@@ -16,26 +16,27 @@ export default function TabsClienteLayout() {
             <MaterialCommunityIcons name="map-marker" size={size} color={color} />
           )
         }} />
-      <Tabs.Screen name="associar" 
-        options={{ title: 'Associar', 
-        tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-group" size={size} color={color} />
-          )
-      }} />
-      <Tabs.Screen name="pedidos" 
+      <Tabs.Screen name="estabelecimento" 
         options={{ 
-          title: 'Pedidos', 
+          title: 'Estabelecimento',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="bookmark" size={size} color={color} />
+            <MaterialCommunityIcons name="folder" size={size} color={color} />
           )
         }} />
+      <Tabs.Screen name="associados" 
+        options={{ 
+          title: 'Associados',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account-group" size={size} color={color} />
+          )
+           }} />
       <Tabs.Screen name="perfil" 
         options={{ 
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-outline" size={size} color={color} />
           )
-      }} />
+          }} />
     </Tabs>
   );
 }
