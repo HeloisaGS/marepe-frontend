@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../assets/images/logo.png';
 import { authService } from '../../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
   const { emailDigitado } = useLocalSearchParams();
@@ -25,12 +26,23 @@ export default function Login() {
       const response = await authService.login(email.trim(), senha);
       console.log('Resposta do login:', response.data);
 
-      // pega o perfil real do usuário salvo no metadata
+      // --- PARTE NOVA: SALVANDO O TOKEN ---
+      // Verificamos onde o token está (pode ser access_token ou a própria data)
+      const tokenBruto = response.data?.access_token || response.data?.session?.access_token || response.data;
+      
+      // Garantimos que o token seja uma STRING para o AsyncStorage não reclamar
+      const tokenParaSalvar = typeof tokenBruto === 'string' ? tokenBruto : JSON.stringify(tokenBruto);
+      
+      await AsyncStorage.setItem('userToken', tokenParaSalvar);
+      console.log('✅ Token salvo com sucesso!');
+      // ------------------------------------
+
+      // Pega o perfil real do usuário salvo no metadata
       const role =
         response?.data?.user?.user_metadata?.role ||
         response?.data?.session?.user?.user_metadata?.role ||
         '';
-      // teste
+      
       console.log('Role extraído do login:', role);
 
       router.push({
@@ -51,7 +63,6 @@ export default function Login() {
       setCarregando(false);
     }
   };
-
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
