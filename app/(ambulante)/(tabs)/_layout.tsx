@@ -11,6 +11,7 @@ export default function TabsAmbulanteLayout() {
         }, 
         tabBarActiveTintColor: '#FFF', 
         tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)', 
+        headerShown: false,
         
       }}
     >
