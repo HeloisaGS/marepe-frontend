@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as TaskManager from 'expo-task-manager';
+import { authService } from '../../../services/authService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -24,18 +25,25 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const LOCATION_TRACKING_TASK = 'LOCATION_TRACKING_TASK';
 
-TaskManager.defineTask(LOCATION_TRACKING_TASK, ({ data, error }: any) => {
+TaskManager.defineTask(LOCATION_TRACKING_TASK, async ({ data, error }: any) => {
   if (error) {
     console.log("Erro na tarefa de background:", error);
     return;
   }
   if (data) {
     const { locations } = data;
-    // O console.log aqui vai mostrar que está capturando em background
-    console.log("Coordenada Background:", locations[0].coords.latitude);
+    const { latitude, longitude, accuracy } = locations[0].coords;
+    
+    console.log("Enviando Background:", latitude, longitude);
+
+    try {
+      // Tenta salvar no banco de dados via API
+      await authService.saveLocation(latitude, longitude, accuracy);
+    } catch (err) {
+      console.log("Falha ao salvar localização via TaskManager:", err.message);
+    }
   }
 });
-
 
 export default function HomeAmbulante() {
   const [isAtivo, setIsAtivo] = useState(false);
@@ -77,23 +85,33 @@ export default function HomeAmbulante() {
   };
   //  online/off
   const gerenciarStatusPraia = async (querFicarOnline: boolean) => {
-    if (querFicarOnline) {
-      const bg = await Location.getBackgroundPermissionsAsync();
-      if (bg.status === 'granted') {
-        setIsAtivo(true); 
-        iniciarTracking();
-      } else {
-        setModalPermissaoVisivel(true); 
-      }
-    } else {
-      setIsAtivo(false);
-      setGpsRuim(false);
+    try {
+      // Avisa o Back-end sobre o novo status
+      const statusParaEnviar = querFicarOnline ? 'online' : 'offline';
+      await authService.updateStatus(statusParaEnviar);
+      console.log(`Status atualizado para: ${statusParaEnviar}`);
 
-      const estaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
-      if (estaRodando) {
-        await Location.stopLocationUpdatesAsync(LOCATION_TRACKING_TASK);
-        console.log("Rastreio parado e notificação removida");
+      if (querFicarOnline) {
+        const bg = await Location.getBackgroundPermissionsAsync();
+        if (bg.status === 'granted') {
+          setIsAtivo(true); 
+          iniciarTracking();
+        } else {
+          setModalPermissaoVisivel(true); 
+        }
+      } else {
+        setIsAtivo(false);
+        setGpsRuim(false);
+
+        const estaRodando = await Location.hasStartedLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+        if (estaRodando) {
+          await Location.stopLocationUpdatesAsync(LOCATION_TRACKING_TASK);
+          console.log("Rastreio parado");
+        }
       }
+    } catch (error) {
+      console.log("Erro ao atualizar status no servidor:", error);
+      Alert.alert("Erro", "Não foi possível atualizar seu status. Verifique sua conexão.");
     }
   };
  // botao entendi do modal, que chama a permissão nativa do celular
