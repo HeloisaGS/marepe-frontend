@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Switch, 
-  Platform, 
-  UIManager, 
-  LayoutAnimation,
-  Modal,
-  Alert, 
-  Linking
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as TaskManager from 'expo-task-manager';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  LayoutAnimation,
+  Linking,
+  Modal,
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View
+} from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../../../services/authService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -233,7 +233,7 @@ export default function HomeAmbulante() {
             <Text style={styles.modalTexto}>
               Para que os banhistas te encontrem na praia, o MaréPE precisa acessar sua localização. 
               {'\n\n'}
-              No próximo passo, clique em <Text style={{fontWeight: 'bold'}}>"Permitir o tempo todo"</Text> para o rastreio não parar quando você bloquear a tela.
+              No próximo passo, clique em <Text style={{fontWeight: 'bold'}}>&quot;Permitir o tempo todo&quot;</Text> para o rastreio não parar quando você bloquear a tela.
             </Text>
             <View style={styles.modalBotoes}>
               <TouchableOpacity 

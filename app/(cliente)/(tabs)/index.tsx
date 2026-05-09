@@ -1,19 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
-  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
 
 // Types
 interface Vendor {
@@ -88,50 +84,50 @@ export default function Mapa() {
 
   // Fetch vendors nearby (mock data for now - replace with API call)
   useEffect(() => {
+    const fetchVendors = async () => {
+      // TODO: Replace with actual API call to backend
+      // Mock data for demonstration
+      const mockVendors: Vendor[] = [
+        {
+          id: '1',
+          name: 'João da Tapioca',
+          type: 'ambulante',
+          status: 'online',
+          latitude: location!.latitude + 0.002,
+          longitude: location!.longitude + 0.002,
+          categories: ['Tapioca', 'Café'],
+          avatar: undefined,
+        },
+        {
+          id: '2',
+          name: 'Barraca do Caranguejo',
+          type: 'barraca',
+          status: 'online',
+          latitude: location!.latitude - 0.003,
+          longitude: location!.longitude + 0.001,
+          categories: ['Frutos do Mar', 'Bebidas'],
+          avatar: undefined,
+        },
+        {
+          id: '3',
+          name: 'Maria da Água de Coco',
+          type: 'ambulante',
+          status: 'paused',
+          latitude: location!.latitude + 0.004,
+          longitude: location!.longitude - 0.002,
+          categories: ['Bebidas'],
+          avatar: undefined,
+        },
+      ];
+      setVendors(mockVendors);
+    };
+
     if (location) {
       fetchVendors();
       const interval = setInterval(fetchVendors, 15000); // Poll every 15s
       return () => clearInterval(interval);
     }
   }, [location]);
-
-  const fetchVendors = async () => {
-    // TODO: Replace with actual API call to backend
-    // Mock data for demonstration
-    const mockVendors: Vendor[] = [
-      {
-        id: '1',
-        name: 'João da Tapioca',
-        type: 'ambulante',
-        status: 'online',
-        latitude: location!.latitude + 0.002,
-        longitude: location!.longitude + 0.002,
-        categories: ['Tapioca', 'Café'],
-        avatar: undefined,
-      },
-      {
-        id: '2',
-        name: 'Barraca do Caranguejo',
-        type: 'barraca',
-        status: 'online',
-        latitude: location!.latitude - 0.003,
-        longitude: location!.longitude + 0.001,
-        categories: ['Frutos do Mar', 'Bebidas'],
-        avatar: undefined,
-      },
-      {
-        id: '3',
-        name: 'Maria da Água de Coco',
-        type: 'ambulante',
-        status: 'paused',
-        latitude: location!.latitude + 0.004,
-        longitude: location!.longitude - 0.002,
-        categories: ['Bebidas'],
-        avatar: undefined,
-      },
-    ];
-    setVendors(mockVendors);
-  };
 
   const handleMarkerPress = (vendor: Vendor) => {
     setSelectedVendor(vendor);
