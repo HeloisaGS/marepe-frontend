@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
 export default function TabsClienteLayout() {
   return (

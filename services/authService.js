@@ -60,5 +60,18 @@ export const authService = {
   // 8. LOGOUT
   logout: async () => {
     return api.post('/auth/logout');
+  },
+  //9. MAPAS
+  updateStatus: async (status) => {
+    // status deve ser 'online' ou 'offline'
+    return api.put('/vendedor/status', { status });
+  },
+
+  saveLocation: async (latitude, longitude, accuracy) => {
+    return api.post('/vendedor/location', {
+      latitude,
+      longitude,
+      accuracy: accuracy || 0
+    });
   }
 };

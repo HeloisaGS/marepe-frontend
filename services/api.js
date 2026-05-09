@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const api = axios.create({
   baseURL: 'https://marepe-backend.onrender.com',
@@ -6,6 +7,19 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   }
+});
+
+// Salvando o token do usuário
+api.interceptors.request.use(async (config) => {
+  try {
+    const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.error("Erro ao buscar token no Storage", error);
+  }
+  return config;
 });
 
 export default api;
