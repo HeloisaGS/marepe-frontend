@@ -13,11 +13,13 @@ import {
   Text,
   TouchableOpacity,
   UIManager,
-  View
+  View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../../../services/authService';
+
+
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -27,21 +29,34 @@ const LOCATION_TRACKING_TASK = 'LOCATION_TRACKING_TASK';
 
 TaskManager.defineTask(LOCATION_TRACKING_TASK, async ({ data, error }: any) => {
   if (error) {
-    console.log("Erro na tarefa de background:", error);
+    console.log("❌ Erro na Task de Background:", error);
     return;
   }
   if (data) {
     const { locations } = data;
     const { latitude, longitude, accuracy } = locations[0].coords;
     
-    console.log("Enviando Background:", latitude, longitude);
-
     try {
-      // Tenta salvar no banco de dados via API
-      await authService.saveLocation(latitude, longitude, accuracy);
-    } catch (err) {
-      console.log("Falha ao salvar localização via TaskManager:", err.message);
-    }
+      const lat = Number(latitude.toFixed(7));
+      const lng = Number(longitude.toFixed(7));
+      const acc = accuracy ? Number(accuracy) : 0;
+
+      // Aqui a gente chama a API
+      const res = await authService.saveLocation(lat, lng, acc);
+      
+      // LOG COMPLETO: Agora você vê o que enviou e o que o servidor respondeu
+      console.log("-----------------------------------------");
+      console.log("📤 ENVIANDO PARA O BANCO:");
+      console.log(`   Coord: ${lat}, ${lng}`);
+      console.log(`   Precisão: ${acc}`);
+      console.log("✅ RESPOSTA DO SERVIDOR (API):", res.data); // Aqui vem a resposta real do banco
+      console.log("-----------------------------------------");
+
+    } catch (err: any) {
+      console.log("❌ ERRO NA CHAMADA DA API:");
+      console.log("   Mensagem:", err.message);
+      console.log("   Dados do Erro:", err.response?.data);
+    } 
   }
 });
 

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { authService } from '../../../services/authService';
 
 // Types
 interface Vendor {
@@ -83,52 +84,53 @@ export default function Mapa() {
   }, []);
 
   // Fetch vendors nearby (mock data for now - replace with API call)
+  // Substitua o useEffect que busca vendedores por este:
   useEffect(() => {
     const fetchVendors = async () => {
-      // TODO: Replace with actual API call to backend
-      // Mock data for demonstration
-      const mockVendors: Vendor[] = [
-        {
-          id: '1',
-          name: 'João da Tapioca',
-          type: 'ambulante',
-          status: 'online',
-          latitude: location!.latitude + 0.002,
-          longitude: location!.longitude + 0.002,
-          categories: ['Tapioca', 'Café'],
-          avatar: undefined,
-        },
-        {
-          id: '2',
-          name: 'Barraca do Caranguejo',
-          type: 'barraca',
-          status: 'online',
-          latitude: location!.latitude - 0.003,
-          longitude: location!.longitude + 0.001,
-          categories: ['Frutos do Mar', 'Bebidas'],
-          avatar: undefined,
-        },
-        {
-          id: '3',
-          name: 'Maria da Água de Coco',
-          type: 'ambulante',
-          status: 'paused',
-          latitude: location!.latitude + 0.004,
-          longitude: location!.longitude - 0.002,
-          categories: ['Bebidas'],
-          avatar: undefined,
-        },
-      ];
-      setVendors(mockVendors);
-    };
+  if (!location) return;
+
+  // LOG PARA VOCÊ VER NO TERMINAL O QUE O CLIENTE ESTÁ PEDINDO
+  console.log(`🔎 Buscando perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+
+  try {
+    const response = await authService.getNearbyVendors(
+      location.latitude,
+      location.longitude,
+      2000 // 2km
+    );
+
+    // Se chegar aqui, o erro 500 sumiu!
+    const formattedVendors = response.data.map((v: any, index: number) => ({
+    // A API retorna vendor_id, não id
+    id: v.vendor_id || `temp-${index}`, 
+    
+    // Como a API de localização NÃO retorna o nome no JSON que você mostrou,
+    // vamos colocar um nome padrão. 
+    // DICA: Verifique se v.vendedor?.nome_barraca existe no retorno real
+    name: v.nome_barraca || v.nome || `Vendedor ${index + 1}`,
+    
+    type: v.tipo || 'ambulante',
+    status: v.status || 'online',
+    latitude: Number(v.latitude),
+    longitude: Number(v.longitude),
+    categories: v.categorias || [],
+    avatar: v.foto_url
+  }));
+
+    console.log(`📡 [CLIENTE] Sucesso! Vendedores encontrados: ${formattedVendors.length}`);
+    setVendors(formattedVendors);
+  } catch (err: any) {
+    // Esse log vai te mostrar se o erro 500 tem uma mensagem interna do servidor
+    console.log("❌ [ERRO DETALHADO]:", err.response?.data || err.message);
+  }
+};
 
     if (location) {
       fetchVendors();
-      const interval = setInterval(fetchVendors, 15000); // Poll every 15s
+      const interval = setInterval(fetchVendors, 15000); // Atualiza a cada 15s
       return () => clearInterval(interval);
     }
   }, [location]);
-
   const handleMarkerPress = (vendor: Vendor) => {
     setSelectedVendor(vendor);
   };

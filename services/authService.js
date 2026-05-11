@@ -61,17 +61,28 @@ export const authService = {
   logout: async () => {
     return api.post('/auth/logout');
   },
-  //9. MAPAS
+ 
+  // 9. MAPAS E STATUS
   updateStatus: async (status) => {
-    // status deve ser 'online' ou 'offline'
-    return api.put('/vendedor/status', { status });
+    return api.put('/vendedor/status', { status }); 
   },
 
   saveLocation: async (latitude, longitude, accuracy) => {
     return api.post('/vendedor/location', {
-      latitude,
-      longitude,
-      accuracy: accuracy || 0
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      accuracy: accuracy ? Number(accuracy) : 0
     });
-  }
+  },
+
+  getNearbyVendors: async (lat, lng, radius = 2000) => {
+    return api.get('/cliente/vendedor-location', {
+      params: { 
+        // Forçamos o envio como número com precisão aceitável pelo PostGIS/Banco
+        lat: Number(parseFloat(lat).toFixed(7)), 
+        lng: Number(parseFloat(lng).toFixed(7)), 
+        radius: Number(radius) 
+      }
+    });
+  },
 };
