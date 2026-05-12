@@ -49,7 +49,12 @@ export default function CadastroCliente() {
       if (response.status === 201 || response.status === 200) {
         router.push({
           pathname: '/(auth)/verificar-token',
-          params: { email: emailExibicao, origem: 'cadastro' } 
+          params: { 
+            email: emailExibicao, 
+            origem: 'cadastro', 
+            nome: nome,
+            role: 'CLIENTE' 
+          } 
         });
       }
     } catch (error: any) {
