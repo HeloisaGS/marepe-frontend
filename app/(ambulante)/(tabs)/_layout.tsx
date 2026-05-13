@@ -24,23 +24,32 @@ export default function TabsAmbulanteLayout() {
           )
         }} 
       />
-      <Tabs.Screen 
-        name="vitrine" 
-        options={{ 
+      <Tabs.Screen
+        name="pedidos"
+        options={{
+          title: 'Pedidos',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="clipboard-list-outline" size={size} color={color} />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="vitrine"
+        options={{
           title: 'Vitrine',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="folder-outline" size={size} color={color} />
           )
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="bateria" 
-        options={{ 
+      <Tabs.Screen
+        name="bateria"
+        options={{
           title: 'Bateria',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="moon-waning-crescent" size={size} color={color} />
           )
-        }} 
+        }}
       />
       <Tabs.Screen 
         name="perfil" 

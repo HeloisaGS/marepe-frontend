@@ -93,7 +93,12 @@ export default function CadastroBarraqueiro() {
       if (response.status === 200 || response.status === 201) {
         router.push({
           pathname: '/(auth)/verificar-token',
-          params: { email: emailExibicao, origem: 'cadastro' }
+          params: {
+            email: emailExibicao,
+            origem: 'cadastro',
+            nome: nome.trim(),
+            role: 'BARRAQUEIRO'
+          }
         });
       }
     } catch (error: any) {
