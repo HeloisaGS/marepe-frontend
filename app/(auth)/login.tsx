@@ -42,8 +42,12 @@ export default function Login() {
         response?.data?.user?.user_metadata?.role ||
         response?.data?.session?.user?.user_metadata?.role ||
         '';
-      
+
       console.log('Role extraído do login:', role);
+
+      // Salvar o role também para verificação futura
+      await AsyncStorage.setItem('userRole', role);
+      console.log('✅ Role salvo:', role);
 
       router.push({
         pathname: '/(auth)/sucesso',

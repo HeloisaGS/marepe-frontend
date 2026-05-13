@@ -14,12 +14,12 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(cliente)" options={{ headerShown: false }} />
-        <Stack.Screen name="(ambulante)" options={{ headerShown: false }} />
-        <Stack.Screen name="(barraca)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(cliente)" />
+        <Stack.Screen name="(ambulante)" />
+        <Stack.Screen name="(barraca)" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

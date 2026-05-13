@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 
-// TODO: Substituir pela URL real do backend
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+// Use the same default as axiosApi.js for consistency
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.21:8000';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -118,3 +118,5 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+export default api;

@@ -58,13 +58,13 @@ export default function Token() {
 
         if (origem === 'cadastro') {
           const response = await authService.verifyEmail(emailString, tokenDigitado);
-          
+
           if (response.status === 200 || response.status === 201) {
             router.push({
               pathname: '/(auth)/cadastro/sucesso-cadastro',
-              params: { 
-                nome: nome, // Passando o nome que veio da tela anterior
-                role: role  // Passando o perfil (AMBULANTE, CLIENTE, etc)
+              params: {
+                nome: nome,
+                role: role
               }
             });
           }
