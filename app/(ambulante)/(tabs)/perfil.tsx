@@ -7,9 +7,11 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import LogoMaré from '../../../assets/images/logo.png';
 import { authService } from '../../../services/authService';
 import { profileService } from '../../../services/profileService'; // ✅ service dedicado
@@ -33,6 +35,8 @@ export default function PerfilAmbulante() {
   const [perfil, setPerfil] = useState<ProfileResponse | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     carregarPerfil();
@@ -41,11 +45,30 @@ export default function PerfilAmbulante() {
   async function carregarPerfil() {
     try {
       setCarregando(true);
-      const response = await profileService.getMeuPerfil(); // ✅ via service
-      setPerfil(response.data);
-    } catch (error) {
+      setErro(null);
+      const response = await profileService.getMeuPerfil();
+
+      if (response && response.data) {
+        setPerfil(response.data);
+      } else {
+        throw new Error('Resposta inválida do servidor');
+      }
+    } catch (error: any) {
       console.error('Erro ao carregar perfil:', error);
-      setErro('Não foi possível carregar o perfil.');
+
+      let mensagemErro = 'Não foi possível carregar o perfil.';
+
+      if (error.response) {
+        // Erro de resposta do servidor
+        mensagemErro = `Erro ${error.response.status}: ${error.response.data?.message || 'Erro no servidor'}`;
+      } else if (error.request) {
+        // Sem resposta do servidor
+        mensagemErro = 'Sem resposta do servidor. Verifique sua conexão.';
+      } else if (error.message) {
+        mensagemErro = error.message;
+      }
+
+      setErro(mensagemErro);
     } finally {
       setCarregando(false);
     }
@@ -58,6 +81,55 @@ export default function PerfilAmbulante() {
       console.error('Erro no logout:', error);
     } finally {
       router.replace('/(auth)');
+    }
+  };
+
+  const selecionarFoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Precisamos de acesso às suas fotos para continuar.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadFoto(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar foto:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a foto');
+    }
+  };
+
+  const uploadFoto = async (foto: any) => {
+    try {
+      setSalvando(true);
+
+      const fotoData = {
+        uri: foto.uri,
+        type: foto.type || 'image/jpeg',
+        name: foto.fileName || 'profile.jpg',
+      };
+
+      await profileService.atualizarPerfil({ foto: fotoData });
+
+      Alert.alert('Sucesso', 'Foto atualizada com sucesso!');
+
+      // Recarregar perfil
+      await carregarPerfil();
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da foto:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar a foto');
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -97,6 +169,9 @@ export default function PerfilAmbulante() {
 
   const fotoUrl = perfil.vendedor?.foto_url ?? null;
 
+  console.log("📸 URL da foto do perfil:", fotoUrl);
+  console.log("📋 Dados do perfil completo:", perfil);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
 
@@ -125,7 +200,11 @@ export default function PerfilAmbulante() {
       <View style={styles.content}>
 
         {/* Avatar */}
-        <View style={styles.avatarContainer}>
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={selecionarFoto}
+          disabled={salvando}
+        >
           {fotoUrl ? (
             <Image source={{ uri: fotoUrl }} style={styles.avatar} />
           ) : (
@@ -133,7 +212,14 @@ export default function PerfilAmbulante() {
               <MaterialCommunityIcons name="account" size={80} color="#000" />
             </View>
           )}
-        </View>
+          <View style={styles.editIconContainer}>
+            {salvando ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <MaterialCommunityIcons name="camera" size={20} color="#FFF" />
+            )}
+          </View>
+        </TouchableOpacity>
 
         {/* Estrelas — fixas em 4 até o sistema de avaliações ser implementado */}
         <View style={styles.starsRow}>{renderStars(4)}</View>
@@ -142,7 +228,10 @@ export default function PerfilAmbulante() {
         <Text style={styles.vendedorNome}>{perfil.nome}</Text>
 
         {/* Alterar categorias */}
-        <TouchableOpacity style={styles.categoriaBtn}>
+        <TouchableOpacity
+          style={styles.categoriaBtn}
+          onPress={() => router.push('/(ambulante)/(tabs)/vitrine')}
+        >
           <View style={styles.categoriaIconBg}>
             <MaterialCommunityIcons name="folder" size={30} color="#FFF" />
           </View>
@@ -209,15 +298,34 @@ const styles = StyleSheet.create({
     borderRadius: 65,
     borderWidth: 2,
     borderColor: '#FAD4B0',
-    overflow: 'hidden',
+    overflow: 'visible',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#E6E6FA',
+    position: 'relative',
   },
-  avatar: { width: '100%', height: '100%' },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E95822',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FDF5E6',
+  },
+  avatar: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+  },
   avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
     justifyContent: 'center',
     alignItems: 'center',
   },

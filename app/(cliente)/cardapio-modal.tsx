@@ -53,9 +53,18 @@ export default function CardapioModal({
     try {
       setLoading(true);
       const response = await cardapioService.getCardapio(vendorId);
+      console.log("🍽️ Cardápio recebido:", response.data);
+
+      // Verificar se há dados
+      if (!response.data || response.data.length === 0) {
+        console.log("⚠️ Cardápio vazio para vendedor:", vendorId);
+        Alert.alert('Aviso', 'Este vendedor ainda não possui itens no cardápio');
+      }
+
       setCardapio(response.data || []);
-    } catch (error) {
-      console.error('Erro ao buscar cardápio:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar cardápio:', error);
+      console.error('Detalhes do erro:', error.response?.data);
       Alert.alert('Erro', 'Não foi possível carregar o cardápio');
     } finally {
       setLoading(false);

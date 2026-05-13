@@ -41,14 +41,24 @@ export default function Vitrine() {
 
       // Buscar todas categorias disponíveis
       const resCategorias = await vitrineService.getCategorias();
+      console.log("📦 Categorias recebidas:", resCategorias.data);
       setCategorias(resCategorias.data || []);
 
       // Buscar catálogo atual do vendedor
       const resCatalogo = await vitrineService.getMeuCatalogo();
-      const idsSelec = resCatalogo.data.map((item: any) => item.id);
+      console.log("📋 Catálogo atual do vendedor:", resCatalogo.data);
+
+      // O backend retorna array de items com estrutura {id, nome_categoria, is_active}
+      // Filtrar apenas os que estão ativos
+      const idsSelec = (resCatalogo.data || [])
+        .filter((item: any) => item.is_active)
+        .map((item: any) => item.id);
+
+      console.log("✅ IDs selecionados:", idsSelec);
       setSelecionadas(idsSelec);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("❌ Erro ao carregar dados:", error);
+      Alert.alert("Erro", "Não foi possível carregar os dados. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }
@@ -64,10 +74,13 @@ export default function Vitrine() {
 
   async function salvarCatalogo() {
     try {
-      await vitrineService.salvarCatalogo(selecionadas);
+      console.log("💾 Salvando categorias:", selecionadas);
+      const response = await vitrineService.salvarCatalogo(selecionadas);
+      console.log("✅ Resposta do servidor:", response.data);
       Alert.alert("Sucesso", "Catálogo atualizado!");
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
+      console.error("❌ Erro ao salvar:", error);
+      console.error("Detalhes do erro:", error.response?.data);
       Alert.alert("Erro", error.response?.data?.detail || "Não foi possível salvar catálogo");
     }
   }
