@@ -11,6 +11,9 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { authService } from '../../../services/authService';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CardapioModal from '../cardapio-modal';
 
 // Types
 interface Vendor {
@@ -36,6 +39,7 @@ export default function Mapa() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showCardapioModal, setShowCardapioModal] = useState<boolean>(false);
   const mapRef = useRef<MapView>(null);
 
   // Request location permission and get user location
@@ -139,11 +143,33 @@ export default function Mapa() {
     setSelectedVendor(null);
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sair',
+      'Deseja realmente sair da sua conta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('userToken');
+            await AsyncStorage.removeItem('userRole');
+            router.replace('/(auth)');
+          }
+        }
+      ]
+    );
+  };
+
   const handlePedirPress = () => {
-    if (selectedVendor) {
-      Alert.alert('Pedir', `Iniciando pedido com ${selectedVendor.name}`);
-      // TODO: Navigate to order screen
-    }
+    if (!selectedVendor) return;
+    setShowCardapioModal(true);
+  };
+
+  const handleCardapioSuccess = () => {
+    setShowCardapioModal(false);
+    setSelectedVendor(null);
   };
 
   // Default location (Recife, PE) if permission denied
@@ -166,6 +192,11 @@ export default function Mapa() {
 
   return (
     <View style={styles.container}>
+      {/* Logout button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <MaterialCommunityIcons name="logout" size={24} color="#E95822" />
+      </TouchableOpacity>
+
       {/* Low precision banner */}
       {lowPrecision && (
         <View style={styles.warningBanner}>
@@ -284,10 +315,22 @@ export default function Mapa() {
                   styles.pedirButtonTextDisabled,
               ]}
             >
-              Pedir
+              Ver Cardápio
             </Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* Cardapio Modal */}
+      {selectedVendor && (
+        <CardapioModal
+          visible={showCardapioModal}
+          vendorId={selectedVendor.id}
+          vendorName={selectedVendor.name}
+          vendorCategories={selectedVendor.categories}
+          onClose={() => setShowCardapioModal(false)}
+          onSuccess={handleCardapioSuccess}
+        />
       )}
     </View>
   );
@@ -297,6 +340,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 20,
+    backgroundColor: '#FFF',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   loadingContainer: {
     flex: 1,
@@ -350,10 +410,18 @@ const styles = StyleSheet.create({
   emptyState: {
     position: 'absolute',
     top: '35%',
-    left: 0,
-    right: 0,
+    left: 20,
+    right: 20,
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 30,
     paddingHorizontal: 40,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
   emptyIcon: {
     fontSize: 80,
@@ -362,13 +430,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#1a1a1a',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#555',
     textAlign: 'center',
   },
   card: {

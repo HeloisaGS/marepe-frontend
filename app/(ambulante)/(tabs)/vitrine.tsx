@@ -5,63 +5,93 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 
 import { MaterialIcons } from '@expo/vector-icons';
 import { vitrineService } from '../../../services/vitrineService';
 
-const ALL_CATEGORIAS = [
-  "Camarão",
-  "Milho",
-  "Queijo",
-  "Picolé",
-  "Castanha",
-  "Peixes"
-];
+interface Categoria {
+  id: string;
+  nome_categoria: string;
+}
 
 const EMOJI: Record<string, string> = {
-  Camarão: "🦐",
-  Milho: "🌽",
-  Queijo: "🧀",
-  Picolé: "🍦",
-  Castanha: "🥜",
-  Peixes: "🐟"
+  "Camarão": "🦐",
+  "Milho": "🌽",
+  "Queijo": "🧀",
+  "Picolé": "🍦",
+  "Castanha": "🥜",
+  "Peixes": "🐟"
 };
 
 export default function Vitrine() {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    carregarCatalogo();
+    carregarDados();
   }, []);
 
-  async function carregarCatalogo() {
+  async function carregarDados() {
     try {
-      const response = await vitrineService.getMeuCatalogo();
-      const categoriasBackend = response.data.map((item: any) => item.categoria);
-      setSelecionadas(categoriasBackend);
+      setLoading(true);
+
+      // Buscar todas categorias disponíveis
+      const resCategorias = await vitrineService.getCategorias();
+      console.log("📦 Categorias recebidas:", resCategorias.data);
+      setCategorias(resCategorias.data || []);
+
+      // Buscar catálogo atual do vendedor
+      const resCatalogo = await vitrineService.getMeuCatalogo();
+      console.log("📋 Catálogo atual do vendedor:", resCatalogo.data);
+
+      // O backend retorna array de items com estrutura {id, nome_categoria, is_active}
+      // Filtrar apenas os que estão ativos
+      const idsSelec = (resCatalogo.data || [])
+        .filter((item: any) => item.is_active)
+        .map((item: any) => item.id);
+
+      console.log("✅ IDs selecionados:", idsSelec);
+      setSelecionadas(idsSelec);
     } catch (error) {
-      console.log("Erro ao carregar catálogo:", error);
+      console.error("❌ Erro ao carregar dados:", error);
+      Alert.alert("Erro", "Não foi possível carregar os dados. Verifique sua conexão.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  function toggleCategoria(categoria: string) {
-    if (selecionadas.includes(categoria)) {
-      setSelecionadas(selecionadas.filter(item => item !== categoria));
+  function toggleCategoria(categoriaId: string) {
+    if (selecionadas.includes(categoriaId)) {
+      setSelecionadas(selecionadas.filter(id => id !== categoriaId));
     } else {
-      setSelecionadas([...selecionadas, categoria]);
+      setSelecionadas([...selecionadas, categoriaId]);
     }
   }
 
   async function salvarCatalogo() {
     try {
-      await vitrineService.salvarCatalogo(selecionadas);
+      console.log("💾 Salvando categorias:", selecionadas);
+      const response = await vitrineService.salvarCatalogo(selecionadas);
+      console.log("✅ Resposta do servidor:", response.data);
       Alert.alert("Sucesso", "Catálogo atualizado!");
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Erro", "Não foi possível salvar catálogo");
+    } catch (error: any) {
+      console.error("❌ Erro ao salvar:", error);
+      console.error("Detalhes do erro:", error.response?.data);
+      Alert.alert("Erro", error.response?.data?.detail || "Não foi possível salvar catálogo");
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#E95822" />
+        <Text style={{ marginTop: 12, color: '#666' }}>Carregando...</Text>
+      </View>
+    );
   }
 
   return (
@@ -72,12 +102,12 @@ export default function Vitrine() {
       </Text>
 
       <View style={styles.grid}>
-        {ALL_CATEGORIAS.map((categoria) => {
-          const ativo = selecionadas.includes(categoria);
+        {categorias.map((categoria) => {
+          const ativo = selecionadas.includes(categoria.id);
           return (
             <TouchableOpacity
-              key={categoria}
-              onPress={() => toggleCategoria(categoria)}
+              key={categoria.id}
+              onPress={() => toggleCategoria(categoria.id)}
               style={[styles.card, ativo && styles.cardAtivo]}
             >
               {ativo && (
@@ -86,11 +116,10 @@ export default function Vitrine() {
                 </View>
               )}
 
-              {/* ✅ Emoji adicionado — estava definido mas nunca renderizado */}
-              <Text style={styles.emoji}>{EMOJI[categoria]}</Text>
+              <Text style={styles.emoji}>{EMOJI[categoria.nome_categoria] || "📦"}</Text>
 
               <Text style={[styles.cardText, ativo && styles.cardTextAtivo]}>
-                {categoria}
+                {categoria.nome_categoria}
               </Text>
             </TouchableOpacity>
           );

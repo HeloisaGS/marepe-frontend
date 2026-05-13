@@ -5,8 +5,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   BackHandler,
+  Alert,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -58,22 +59,34 @@ export default function Sucesso() {
 
       const roleNormalizado = roleRecebido.toUpperCase();
 
-      if (roleNormalizado === 'CLIENTE') {
-        router.replace('/(cliente)/(tabs)');
-        return;
-      }
+      console.log('[REDIRECT] Tentando redirecionar para role:', roleNormalizado);
 
-      if (roleNormalizado === 'AMBULANTE') {
-        router.replace('/(ambulante)/(tabs)');
-        return;
-      }
+      try {
+        if (roleNormalizado === 'CLIENTE') {
+          console.log('[REDIRECT] -> Cliente index');
+          router.replace('/(cliente)/(tabs)');
+          return;
+        }
 
-      if (roleNormalizado === 'BARRAQUEIRO') {
-        router.replace('/(barraca)/(tabs)');
-        return;
-      }
+        if (roleNormalizado === 'AMBULANTE') {
+          console.log('[REDIRECT] -> Ambulante index');
+          router.replace('/(ambulante)/(tabs)');
+          return;
+        }
 
-      router.replace('/(auth)');
+        if (roleNormalizado === 'BARRAQUEIRO') {
+          console.log('[REDIRECT] -> Barraqueiro index');
+          router.replace('/(barraca)/(tabs)');
+          return;
+        }
+
+        console.log('[REDIRECT] -> Auth (fallback)');
+        router.replace('/(auth)');
+      } catch (error) {
+        console.error('[REDIRECT ERROR]', error);
+        Alert.alert('Erro', 'Não foi possível redirecionar. Tente novamente.');
+        router.replace('/(auth)');
+      }
     };
 
     const backSubscription = BackHandler.addEventListener(

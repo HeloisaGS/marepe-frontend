@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ipconfig)",
+      "Bash(findstr \"IPv4\")",
+      "Bash(powershell *)",
+      "Bash(curl *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8001\")",
+      "Read(//c/Users/Valcann/Downloads/marepe/marepe-backend/**)",
+      "Bash(python scripts/add_test_vendors.py)"
+    ]
+  }
+}

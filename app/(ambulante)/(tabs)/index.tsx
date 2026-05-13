@@ -15,7 +15,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../../../services/authService';
 
@@ -201,7 +201,7 @@ export default function HomeAmbulante() {
       <View style={{ flex: 1 }}> 
         {/* 1. O MAPA (Ocupa tudo) */}
         <MapView
-          provider={PROVIDER_GOOGLE}
+          provider={PROVIDER_DEFAULT}
           style={StyleSheet.absoluteFillObject}
           showsUserLocation={true}
           region={{

@@ -5,8 +5,8 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  RefreshControl,
   TouchableOpacity,
+  RefreshControl,
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import { pedidoService } from '../../../services/pedidoService';
 
 interface Pedido {
   id: string;
-  ambulante_nome: string;
+  cliente_nome: string;
   status: string;
   created_at: string;
   posicao_fila?: number;
@@ -27,21 +27,21 @@ interface Pedido {
 }
 
 const STATUS_CONFIG = {
-  pendente: { label: 'Pendente', color: '#FFA500', icon: 'clock-outline' },
-  aceito: { label: 'Aceito', color: '#4CAF50', icon: 'check-circle-outline' },
-  em_preparo: { label: 'Em Preparo', color: '#2196F3', icon: 'chef-hat' },
-  pronto: { label: 'Pronto', color: '#9C27B0', icon: 'food' },
-  entregue: { label: 'Entregue', color: '#4CAF50', icon: 'check-circle' },
-  negado: { label: 'Negado', color: '#F44336', icon: 'close-circle-outline' },
-  cancelado: { label: 'Cancelado', color: '#999', icon: 'cancel' },
-  expirado: { label: 'Expirado', color: '#999', icon: 'timer-off-outline' },
+  pendente: { label: 'Pendente', color: '#FFA500', icon: 'clock-outline', nextStatus: null },
+  aceito: { label: 'Aceito', color: '#4CAF50', icon: 'check-circle-outline', nextStatus: 'em_preparo' },
+  em_preparo: { label: 'Em Preparo', color: '#2196F3', icon: 'chef-hat', nextStatus: 'pronto' },
+  pronto: { label: 'Pronto', color: '#9C27B0', icon: 'food', nextStatus: 'entregue' },
+  entregue: { label: 'Entregue', color: '#4CAF50', icon: 'check-circle', nextStatus: null },
+  negado: { label: 'Negado', color: '#F44336', icon: 'close-circle-outline', nextStatus: null },
+  cancelado: { label: 'Cancelado', color: '#999', icon: 'cancel', nextStatus: null },
+  expirado: { label: 'Expirado', color: '#999', icon: 'timer-off-outline', nextStatus: null },
 };
 
-export default function PedidosCliente() {
+export default function PedidosAmbulante() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [canceling, setCanceling] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPedidos();
@@ -51,10 +51,15 @@ export default function PedidosCliente() {
 
   const fetchPedidos = async () => {
     try {
-      const response = await pedidoService.listarPedidosCliente();
+      const response = await pedidoService.listarPedidosAmbulante();
+      console.log('📋 [AMBULANTE] Pedidos recebidos:', response.data?.length || 0);
+      if (response.data && response.data.length > 0) {
+        console.log('📋 [AMBULANTE] Primeiro pedido:', response.data[0]);
+        console.log('📋 [AMBULANTE] Status:', response.data[0].status);
+      }
       setPedidos(response.data || []);
     } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
+      console.error('❌ [AMBULANTE] Erro ao buscar pedidos:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,26 +71,54 @@ export default function PedidosCliente() {
     fetchPedidos();
   };
 
-  const handleCancelarPedido = async (pedidoId: string) => {
+  const handleAvancarStatus = async (pedidoId: string, novoStatus: string) => {
+    try {
+      setUpdating(pedidoId);
+      await pedidoService.atualizarStatusPedido(pedidoId, novoStatus);
+      Alert.alert('Sucesso', 'Status atualizado');
+      fetchPedidos();
+    } catch (error: any) {
+      console.error('Erro ao atualizar status:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível atualizar o status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleAceitarPedido = async (pedidoId: string) => {
+    try {
+      setUpdating(pedidoId);
+      await pedidoService.aceitarPedido(pedidoId);
+      Alert.alert('Sucesso', 'Pedido aceito!');
+      fetchPedidos();
+    } catch (error: any) {
+      console.error('Erro ao aceitar pedido:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível aceitar o pedido');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleNegarPedido = async (pedidoId: string) => {
     Alert.alert(
-      'Cancelar Pedido',
-      'Tem certeza que deseja cancelar este pedido?',
+      'Negar Pedido',
+      'Tem certeza que deseja negar este pedido?',
       [
-        { text: 'Não', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Sim, cancelar',
+          text: 'Negar',
           style: 'destructive',
           onPress: async () => {
             try {
-              setCanceling(pedidoId);
-              await pedidoService.cancelarPedido(pedidoId);
-              Alert.alert('Sucesso', 'Pedido cancelado');
+              setUpdating(pedidoId);
+              await pedidoService.negarPedido(pedidoId);
+              Alert.alert('Pedido negado');
               fetchPedidos();
             } catch (error: any) {
-              console.error('Erro ao cancelar:', error);
-              Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível cancelar');
+              console.error('Erro ao negar pedido:', error);
+              Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível negar o pedido');
             } finally {
-              setCanceling(null);
+              setUpdating(null);
             }
           }
         }
@@ -103,15 +136,27 @@ export default function PedidosCliente() {
     });
   };
 
+  const getNextStatusLabel = (currentStatus: string) => {
+    const map: any = {
+      aceito: 'Iniciar Preparo',
+      em_preparo: 'Marcar como Pronto',
+      pronto: 'Entregar',
+    };
+    return map[currentStatus] || 'Avançar';
+  };
+
   const renderPedido = ({ item }: { item: Pedido }) => {
+    console.log('🎨 [RENDER] Pedido ID:', item.id, 'Status:', item.status);
     const config = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pendente;
+    const nextStatus = config.nextStatus;
+    console.log('🎨 [RENDER] Config:', config.label, 'NextStatus:', nextStatus);
 
     return (
       <View style={styles.pedidoCard}>
         <View style={styles.header}>
-          <View style={styles.vendorInfo}>
+          <View style={styles.clientInfo}>
             <MaterialCommunityIcons name="account" size={20} color="#E95822" />
-            <Text style={styles.vendorName}>{item.ambulante_nome}</Text>
+            <Text style={styles.clientName}>{item.cliente_nome}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: config.color }]}>
             <MaterialCommunityIcons name={config.icon as any} size={16} color="#FFF" />
@@ -119,19 +164,12 @@ export default function PedidosCliente() {
           </View>
         </View>
 
-        {item.posicao_fila && (
-          <View style={styles.filaInfo}>
-            <MaterialCommunityIcons name="format-list-numbered" size={16} color="#666" />
-            <Text style={styles.filaText}>Posição na fila: {item.posicao_fila}</Text>
-          </View>
-        )}
-
         {item.itens && item.itens.length > 0 && (
           <View style={styles.itensContainer}>
-            <Text style={styles.itensTitle}>Itens:</Text>
+            <Text style={styles.itensTitle}>Itens pedidos:</Text>
             {item.itens.map((it, idx) => (
               <Text key={idx} style={styles.itemText}>
-                {it.quantidade}x {it.nome} - R$ {(it.preco_unitario * it.quantidade).toFixed(2)}
+                {it.quantidade}x {it.nome}
               </Text>
             ))}
           </View>
@@ -148,15 +186,43 @@ export default function PedidosCliente() {
         </View>
 
         {item.status === 'pendente' && (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.negarButton, updating === item.id && styles.actionButtonDisabled]}
+              onPress={() => handleNegarPedido(item.id)}
+              disabled={updating === item.id}
+            >
+              {updating === item.id ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.actionButtonText}>Negar</Text>
+              )}
+            </TouchableOpacity>
+            <View style={{ width: 12 }} />
+            <TouchableOpacity
+              style={[styles.aceitarButton, updating === item.id && styles.actionButtonDisabled]}
+              onPress={() => handleAceitarPedido(item.id)}
+              disabled={updating === item.id}
+            >
+              {updating === item.id ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.actionButtonText}>Aceitar</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {item.status !== 'pendente' && nextStatus && (
           <TouchableOpacity
-            style={[styles.cancelButton, canceling === item.id && styles.cancelButtonDisabled]}
-            onPress={() => handleCancelarPedido(item.id)}
-            disabled={canceling === item.id}
+            style={[styles.actionButton, updating === item.id && styles.actionButtonDisabled]}
+            onPress={() => handleAvancarStatus(item.id, nextStatus)}
+            disabled={updating === item.id}
           >
-            {canceling === item.id ? (
+            {updating === item.id ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text style={styles.cancelButtonText}>Cancelar Pedido</Text>
+              <Text style={styles.actionButtonText}>{getNextStatusLabel(item.status)}</Text>
             )}
           </TouchableOpacity>
         )}
@@ -176,15 +242,15 @@ export default function PedidosCliente() {
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Meus Pedidos</Text>
+        <Text style={styles.title}>Pedidos Recebidos</Text>
       </View>
 
       {pedidos.length === 0 ? (
         <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="basket-outline" size={80} color="#DDD" />
-          <Text style={styles.emptyText}>Nenhum pedido ainda</Text>
+          <MaterialCommunityIcons name="clipboard-list-outline" size={80} color="#DDD" />
+          <Text style={styles.emptyText}>Nenhum pedido recebido</Text>
           <Text style={styles.emptySubtext}>
-            Encontre vendedores no mapa e faça seu primeiro pedido!
+            Aguarde clientes solicitarem seus produtos!
           </Text>
         </View>
       ) : (
@@ -251,12 +317,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  vendorInfo: {
+  clientInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  vendorName: {
+  clientName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
@@ -274,20 +340,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFF',
     marginLeft: 4,
-  },
-  filaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFF9E6',
-    borderRadius: 8,
-  },
-  filaText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
   },
   itensContainer: {
     marginTop: 8,
@@ -329,6 +381,39 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#E95822',
   },
+  actionsRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#E95822',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonDisabled: {
+    backgroundColor: '#CCC',
+  },
+  aceitarButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  negarButton: {
+    flex: 1,
+    backgroundColor: '#F44336',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -346,20 +431,5 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#F44336',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  cancelButtonDisabled: {
-    backgroundColor: '#CCC',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFF',
   },
 });

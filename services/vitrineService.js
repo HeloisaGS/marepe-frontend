@@ -1,8 +1,8 @@
-import api from './api';
+import api from './axiosApi';
 
 export const vitrineService = {
   getCategorias: async () => {
-    return api.get('/vendedor/categorias');
+    return api.get('/vendedor/catalogo/categorias');
   },
 
   salvarCatalogo: async (categorias) => {

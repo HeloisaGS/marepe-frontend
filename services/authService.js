@@ -1,4 +1,4 @@
-import api from './api';
+import api from './axiosApi';
 
 export const authService = {
   // 1. CADASTRO (Rota única conforme seu Swagger)

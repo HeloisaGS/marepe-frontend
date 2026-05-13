@@ -90,11 +90,12 @@ export default function CadastroAmbulante() {
       if (response.status === 200 || response.status === 201) {
         router.push({
           pathname: '/(auth)/verificar-token',
-          params: { 
+          params: {
             email: emailExibicao,
             origem: 'cadastro',
-            nome:nome,
-            role:'AMBULANTE' }
+            nome: nome.trim(),
+            role: 'AMBULANTE'
+          }
         });
       }
     } catch (error: any) {
