@@ -57,7 +57,7 @@ export default function SucessoCadastro() {
         {etapa === 'bem-vindo' && (
           <View style={styles.innerContent}>
             <Text style={styles.textoNormal}>
-              <Text style={styles.negrito}>Usuário</Text>,{"\n"}
+              <Text style={styles.negrito}>{nome}</Text>,{"\n"}
               Seja bem-vindo ao <Text style={styles.negrito}>MaréPE!</Text>
             </Text>
           </View>
