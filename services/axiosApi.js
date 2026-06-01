@@ -27,14 +27,30 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Log de erros de resposta
+// Log de erros de resposta e tratamento de 401
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response) {
       console.error('❌ [API ERROR] Status:', error.response.status);
       console.error('❌ [API ERROR] Data:', error.response.data);
       console.error('❌ [API ERROR] URL:', error.config?.url);
+
+      // Se receber 401, limpar credenciais e redirecionar para login
+      if (error.response.status === 401) {
+        console.warn('⚠️ Token inválido/expirado (axiosApi). Fazendo logout...');
+        try {
+          await AsyncStorage.removeItem('userToken');
+          await AsyncStorage.removeItem('userRole');
+          console.log('✅ Credenciais removidas');
+
+          // Importar dinamicamente o router
+          const { router } = require('expo-router');
+          router.replace('/(auth)');
+        } catch (e) {
+          console.error('❌ Erro ao fazer logout automático:', e);
+        }
+      }
     } else if (error.request) {
       console.error('❌ [NETWORK ERROR] Sem resposta do servidor');
     } else {

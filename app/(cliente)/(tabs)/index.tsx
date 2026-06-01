@@ -14,6 +14,7 @@ import { authService } from '../../../services/authService';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CardapioModal from '../cardapio-modal';
+import CategoryFilter from '../../../components/CategoryFilter';
 
 // Types
 interface Vendor {
@@ -37,10 +38,30 @@ export default function Mapa() {
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showCardapioModal, setShowCardapioModal] = useState<boolean>(false);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const mapRef = useRef<MapView>(null);
+
+  // Fetch available categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await authService.getAvailableCategories();
+        const formattedCategories = response.data.map((cat: any) => ({
+          id: cat.id || cat.categoria_id,
+          name: cat.nome_categoria || cat.name,
+        }));
+        setCategories(formattedCategories);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Request location permission and get user location
   useEffect(() => {
@@ -135,6 +156,30 @@ export default function Mapa() {
       return () => clearInterval(interval);
     }
   }, [location]);
+
+  // Filter vendors based on selected categories
+  useEffect(() => {
+    if (selectedCategories.length === 0) {
+      setFilteredVendors(vendors);
+    } else {
+      const filtered = vendors.filter((vendor) =>
+        vendor.categories.some((cat) => selectedCategories.includes(cat))
+      );
+      setFilteredVendors(filtered);
+    }
+  }, [vendors, selectedCategories]);
+
+  const handleToggleCategory = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleClearCategories = () => {
+    setSelectedCategories([]);
+  };
   const handleMarkerPress = (vendor: Vendor) => {
     setSelectedVendor(vendor);
   };
@@ -197,6 +242,16 @@ export default function Mapa() {
         <MaterialCommunityIcons name="logout" size={24} color="#E95822" />
       </TouchableOpacity>
 
+      {/* Category Filter */}
+      {categories.length > 0 && (
+        <CategoryFilter
+          categories={categories}
+          selectedCategories={selectedCategories}
+          onToggleCategory={handleToggleCategory}
+          onClearAll={handleClearCategories}
+        />
+      )}
+
       {/* Low precision banner */}
       {lowPrecision && (
         <View style={styles.warningBanner}>
@@ -223,7 +278,7 @@ export default function Mapa() {
         showsMyLocationButton={true}
       >
         {/* Vendor markers */}
-        {vendors.map((vendor) => (
+        {filteredVendors.map((vendor) => (
           <Marker
             key={vendor.id}
             coordinate={{
@@ -251,13 +306,17 @@ export default function Mapa() {
       </MapView>
 
       {/* Empty state */}
-      {locationPermission && vendors.length === 0 && !loading && (
+      {locationPermission && filteredVendors.length === 0 && !loading && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🦀</Text>
           <Text style={styles.emptyTitle}>
-            Nenhum vendedor ativo por perto no momento
+            {selectedCategories.length > 0
+              ? 'Nenhum vendedor encontrado para as categorias selecionadas'
+              : 'Nenhum vendedor ativo por perto no momento'}
           </Text>
-          <Text style={styles.emptySubtitle}>Tente mais tarde!</Text>
+          <Text style={styles.emptySubtitle}>
+            {selectedCategories.length > 0 ? 'Tente outras categorias!' : 'Tente mais tarde!'}
+          </Text>
         </View>
       )}
 
