@@ -22,7 +22,12 @@ class ApiClient {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
-          console.log('🔑 Token encontrado (ApiClient), enviando na requisição');
+          // Log detalhado do token para debug
+          console.log('🔑 Token bruto:', token.substring(0, 50) + '...');
+          console.log('🔑 Tamanho do token:', token.length);
+          console.log('🔑 Primeiro caractere:', token.charAt(0));
+          console.log('🔑 Último caractere:', token.charAt(token.length - 1));
+
           config.headers.Authorization = `Bearer ${token}`;
         } else {
           console.warn('⚠️ Token não encontrado no AsyncStorage (ApiClient)');
@@ -33,14 +38,30 @@ class ApiClient {
       return config;
     });
 
-    // Interceptor de resposta para logs
+    // Interceptor de resposta para logs e tratamento de 401
     this.client.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response) {
           console.error('❌ [API ERROR] Status:', error.response.status);
           console.error('❌ [API ERROR] Data:', error.response.data);
           console.error('❌ [API ERROR] URL:', error.config?.url);
+
+          // Se receber 401, limpar credenciais e redirecionar para login
+          if (error.response.status === 401) {
+            console.warn('⚠️ Token inválido/expirado. Fazendo logout...');
+            try {
+              await AsyncStorage.removeItem('userToken');
+              await AsyncStorage.removeItem('userRole');
+              console.log('✅ Credenciais removidas');
+
+              // Importar dinamicamente o router para evitar ciclo de dependência
+              const { router } = await import('expo-router');
+              router.replace('/(auth)');
+            } catch (e) {
+              console.error('❌ Erro ao fazer logout automático:', e);
+            }
+          }
         } else if (error.request) {
           console.error('❌ [NETWORK ERROR] Sem resposta do servidor');
         } else {

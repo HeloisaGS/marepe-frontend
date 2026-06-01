@@ -77,12 +77,29 @@ export const authService = {
 
   getNearbyVendors: async (lat, lng, radius = 2000) => {
     return api.get('/cliente/vendedor-location', {
-      params: { 
+      params: {
         // Forçamos o envio como número com precisão aceitável pelo PostGIS/Banco
-        lat: Number(parseFloat(lat).toFixed(7)), 
-        lng: Number(parseFloat(lng).toFixed(7)), 
-        radius: Number(radius) 
+        lat: Number(parseFloat(lat).toFixed(7)),
+        lng: Number(parseFloat(lng).toFixed(7)),
+        radius: Number(radius)
       }
     });
+  },
+
+  // 10. LOCALIZAÇÃO ESTÁTICA DE BARRACA (US-013)
+  saveStaticLocation: async (latitude, longitude) => {
+    return api.post('/barraca/static-location', {
+      latitude: Number(latitude),
+      longitude: Number(longitude)
+    });
+  },
+
+  getStaticLocation: async () => {
+    return api.get('/barraca/static-location');
+  },
+
+  // 11. CATEGORIAS DISPONÍVEIS (US-015)
+  getAvailableCategories: async () => {
+    return api.get('/categorias');
   },
 };

@@ -43,22 +43,28 @@ export default function TabsAmbulanteLayout() {
         }}
       />
       <Tabs.Screen
-        name="bateria"
+        name="produtos"
         options={{
-          title: 'Bateria',
+          title: 'Cardápio',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="moon-waning-crescent" size={size} color={color} />
+            <MaterialCommunityIcons name="food" size={size} color={color} />
           )
         }}
       />
-      <Tabs.Screen 
-        name="perfil" 
-        options={{ 
+      <Tabs.Screen
+        name="perfil"
+        options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-outline" size={size} color={color} />
           )
-        }} 
+        }}
+      />
+      <Tabs.Screen
+        name="bateria"
+        options={{
+          href: null, // Esconde a aba
+        }}
       />
     </Tabs>
   );

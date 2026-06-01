@@ -26,15 +26,20 @@ export default function Login() {
       const response = await authService.login(email.trim(), senha);
       console.log('Resposta do login:', response.data);
 
-      // --- PARTE NOVA: SALVANDO O TOKEN ---
-      // Verificamos onde o token está (pode ser access_token ou a própria data)
-      const tokenBruto = response.data?.access_token || response.data?.session?.access_token || response.data;
-      
-      // Garantimos que o token seja uma STRING para o AsyncStorage não reclamar
-      const tokenParaSalvar = typeof tokenBruto === 'string' ? tokenBruto : JSON.stringify(tokenBruto);
-      
-      await AsyncStorage.setItem('userToken', tokenParaSalvar);
-      console.log('✅ Token salvo com sucesso!');
+      // --- SALVANDO O TOKEN ---
+      const tokenBruto = response.data?.access_token || response.data?.session?.access_token;
+
+      if (!tokenBruto) {
+        console.error('❌ Token não encontrado na resposta:', response.data);
+        throw new Error('Token não encontrado na resposta do servidor');
+      }
+
+      // O token deve ser sempre uma string
+      const token = typeof tokenBruto === 'string' ? tokenBruto : String(tokenBruto);
+
+      await AsyncStorage.setItem('userToken', token);
+      console.log('✅ Token salvo:', token.substring(0, 30) + '...');
+      console.log('✅ Tamanho do token:', token.length);
       // ------------------------------------
 
       // Pega o perfil real do usuário salvo no metadata
