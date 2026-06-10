@@ -102,4 +102,14 @@ export const authService = {
   getAvailableCategories: async () => {
     return api.get('/categorias');
   },
+
+  // 12. DETALHES DO ESTABELECIMENTO (US-023)
+  getEstablishmentDetails: async (vendorId) => {
+    return api.get(`/estabelecimentos/${vendorId}`);
+  },
+
+  // 13. ASSOCIAÇÃO A ESTABELECIMENTO (US-024)
+  createAssociation: async (vendorId) => {
+    return api.post(`/cliente/associations?vendor_id=${vendorId}`);
+  },
 };

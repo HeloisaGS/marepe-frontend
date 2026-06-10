@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CardapioModal from '../cardapio-modal';
 import CategoryFilter from '../../../components/CategoryFilter';
+import BottomSheetBarraca from '../../../components/BottomSheetBarraca';
 
 // Types
 interface Vendor {
@@ -42,6 +43,7 @@ export default function Mapa() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showCardapioModal, setShowCardapioModal] = useState<boolean>(false);
+  const [showBarracaSheet, setShowBarracaSheet] = useState<boolean>(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const mapRef = useRef<MapView>(null);
@@ -182,10 +184,15 @@ export default function Mapa() {
   };
   const handleMarkerPress = (vendor: Vendor) => {
     setSelectedVendor(vendor);
+    // Verificar se é barraca ou ambulante
+    if (vendor.type === 'barraca') {
+      setShowBarracaSheet(true);
+    }
   };
 
   const handleCloseCard = () => {
     setSelectedVendor(null);
+    setShowBarracaSheet(false);
   };
 
   const handleLogout = async () => {
@@ -389,6 +396,15 @@ export default function Mapa() {
           vendorCategories={selectedVendor.categories}
           onClose={() => setShowCardapioModal(false)}
           onSuccess={handleCardapioSuccess}
+        />
+      )}
+
+      {/* Bottom Sheet Barraca */}
+      {selectedVendor && selectedVendor.type === 'barraca' && (
+        <BottomSheetBarraca
+          visible={showBarracaSheet}
+          vendorId={selectedVendor.id}
+          onClose={handleCloseCard}
         />
       )}
     </View>
