@@ -85,4 +85,31 @@ export const authService = {
       }
     });
   },
+
+  // 10. LOCALIZAÇÃO ESTÁTICA DE BARRACA (US-013)
+  saveStaticLocation: async (latitude, longitude) => {
+    return api.post('/barraca/static-location', {
+      latitude: Number(latitude),
+      longitude: Number(longitude)
+    });
+  },
+
+  getStaticLocation: async () => {
+    return api.get('/barraca/static-location');
+  },
+
+  // 11. CATEGORIAS DISPONÍVEIS (US-015)
+  getAvailableCategories: async () => {
+    return api.get('/categorias');
+  },
+
+  // 12. DETALHES DO ESTABELECIMENTO (US-023)
+  getEstablishmentDetails: async (vendorId) => {
+    return api.get(`/estabelecimentos/${vendorId}`);
+  },
+
+  // 13. ASSOCIAÇÃO A ESTABELECIMENTO (US-024)
+  createAssociation: async (vendorId) => {
+    return api.post(`/cliente/associations?vendor_id=${vendorId}`);
+  },
 };

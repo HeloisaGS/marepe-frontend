@@ -14,6 +14,8 @@ import { authService } from '../../../services/authService';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CardapioModal from '../cardapio-modal';
+import CategoryFilter from '../../../components/CategoryFilter';
+import BottomSheetBarraca from '../../../components/BottomSheetBarraca';
 
 // Types
 interface Vendor {
@@ -40,6 +42,9 @@ export default function Mapa() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showCardapioModal, setShowCardapioModal] = useState<boolean>(false);
+  const [showBarracaSheet, setShowBarracaSheet] = useState<boolean>(false);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const mapRef = useRef<MapView>(null);
 
   // Request location permission and get user location
@@ -137,10 +142,15 @@ export default function Mapa() {
   }, [location]);
   const handleMarkerPress = (vendor: Vendor) => {
     setSelectedVendor(vendor);
+    // Verificar se é barraca ou ambulante
+    if (vendor.type === 'barraca') {
+      setShowBarracaSheet(true);
+    }
   };
 
   const handleCloseCard = () => {
     setSelectedVendor(null);
+    setShowBarracaSheet(false);
   };
 
   const handleLogout = async () => {
@@ -170,6 +180,18 @@ export default function Mapa() {
   const handleCardapioSuccess = () => {
     setShowCardapioModal(false);
     setSelectedVendor(null);
+  };
+
+  const handleAssociate = () => {
+    if (!selectedVendor) return;
+    // TODO: Implementar fluxo US-024
+    Alert.alert('Em desenvolvimento', 'Fluxo de associação será implementado na US-024');
+  };
+
+  const handleOpenChat = () => {
+    if (!selectedVendor) return;
+    // Navegar para a tela de chat (US-025)
+    router.push(`/(cliente)/chat/${selectedVendor.id}`);
   };
 
   // Default location (Recife, PE) if permission denied
@@ -261,8 +283,8 @@ export default function Mapa() {
         </View>
       )}
 
-      {/* Vendor card (bottom sheet) */}
-      {selectedVendor && (
+      {/* Vendor card (bottom sheet) - Apenas para ambulantes */}
+      {selectedVendor && selectedVendor.type === 'ambulante' && (
         <View style={styles.card}>
           {/* Close button */}
           <TouchableOpacity
@@ -331,6 +353,23 @@ export default function Mapa() {
           onClose={() => setShowCardapioModal(false)}
           onSuccess={handleCardapioSuccess}
         />
+      )}
+
+      {/* Bottom Sheet para Barraca (US-023) */}
+      {showBarracaSheet && selectedVendor && selectedVendor.type === 'barraca' && (
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={handleCloseCard}
+          />
+          <BottomSheetBarraca
+            vendorId={selectedVendor.id}
+            onClose={handleCloseCard}
+            onAssociate={handleAssociate}
+            onOpenChat={handleOpenChat}
+          />
+        </View>
       )}
     </View>
   );
@@ -512,5 +551,17 @@ const styles = StyleSheet.create({
   },
   pedirButtonTextDisabled: {
     color: '#999',
+  },
+  bottomSheetOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
 });
