@@ -105,11 +105,26 @@ export const authService = {
 
   // 12. DETALHES DO ESTABELECIMENTO (US-023)
   getEstablishmentDetails: async (vendorId) => {
-    return api.get(`/estabelecimentos/${vendorId}`);
+    return api.get(`/barraca/${vendorId}`);
   },
 
   // 13. ASSOCIAÇÃO A ESTABELECIMENTO (US-024)
   createAssociation: async (vendorId) => {
     return api.post(`/cliente/associations?vendor_id=${vendorId}`);
+  },
+
+  // 14. LISTAR CLIENTES ASSOCIADOS À BARRACA
+  getBarracaAssociations: async () => {
+    return api.get('/barraca/my-associations');
+  },
+
+  // 15. LISTAR ASSOCIAÇÃO DO CLIENTE (retorna o estabelecimento associado)
+  getClientAssociation: async () => {
+    return api.get('/cliente/my-association');
+  },
+
+  // 16. DESASSOCIAR CLIENTE
+  deleteAssociation: async () => {
+    return api.delete('/cliente/association');
   },
 };
