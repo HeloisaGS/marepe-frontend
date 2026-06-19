@@ -6,6 +6,7 @@ export default function BarracaLayout() {
     <ProtectedRoute requiredRole="BARRAQUEIRO">
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="cadastro-barraca" options={{ headerShown: true, title: 'Cadastrar Barraca' }} />
       </Stack>
     </ProtectedRoute>
   );
