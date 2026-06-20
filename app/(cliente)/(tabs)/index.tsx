@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { authService } from '../../../services/authService';
@@ -16,6 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CardapioModal from '../cardapio-modal';
 import CategoryFilter from '../../../components/CategoryFilter';
 import BottomSheetBarraca from '../../../components/BottomSheetBarraca';
+import { barracaService } from '../../../services/barracaService';
+
 
 // Types
 interface Vendor {
@@ -47,6 +50,10 @@ export default function Mapa() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const mapRef = useRef<MapView>(null);
+  const [associationStatus, setAssociationStatus] = useState<string>('none');
+  const [hasAnyActiveAssoc, setHasAnyActiveAssoc] = useState<boolean>(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [loadingBtn, setLoadingBtn] = useState<boolean>(false);
 
   // Fetch available categories
   useEffect(() => {
@@ -112,49 +119,60 @@ export default function Mapa() {
 
   // Fetch vendors nearby (mock data for now - replace with API call)
   // Substitua o useEffect que busca vendedores por este:
+  // Fetch vendors AND stands nearby (Une ambulantes ativos e barracas fixas no mesmo mapa)
   useEffect(() => {
-    const fetchVendors = async () => {
-  if (!location) return;
+    const fetchVendorsAndStands = async () => {
+      if (!location) return;
 
-  // LOG PARA VOCÊ VER NO TERMINAL O QUE O CLIENTE ESTÁ PEDINDO
-  console.log(`🔎 Buscando perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+      console.log(`🔎 [MAPA] Atualizando posições perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
 
-  try {
-    const response = await authService.getNearbyVendors(
-      location.latitude,
-      location.longitude,
-      2000 // 2km
-    );
+      try {
+        // Executa as duas buscas em paralelo para não travar o app
+        const [ambulantesRes, barracasRes] = await Promise.all([
+          authService.getNearbyVendors(location.latitude, location.longitude, 2000),
+          barracaService.listarTodasBarracas() // Rota que traz as barracas cadastradas pelas coordenadas fixas
+        ]);
 
-    // Se chegar aqui, o erro 500 sumiu!
-    const formattedVendors = response.data.map((v: any, index: number) => ({
-    // A API retorna vendor_id, não id
-    id: v.vendor_id || `temp-${index}`, 
-    
-    // Como a API de localização NÃO retorna o nome no JSON que você mostrou,
-    // vamos colocar um nome padrão. 
-    // DICA: Verifique se v.vendedor?.nome_barraca existe no retorno real
-    name: v.nome_barraca || v.nome || `Vendedor ${index + 1}`,
-    
-    type: v.tipo || 'ambulante',
-    status: v.status || 'online',
-    latitude: Number(v.latitude),
-    longitude: Number(v.longitude),
-    categories: v.categorias || [],
-    avatar: v.foto_url
-  }));
+        // 1. Formata os Ambulantes vindo do endpoint de localização
+        const listaAmbulantes = (ambulantesRes.data || []).map((v: any, index: number) => ({
+          id: v.vendor_id || `ambulante-${index}`,
+          name: v.nome_barraca || v.nome || `Ambulante ${index + 1}`,
+          type: 'ambulante' as const,
+          status: (v.status || 'online') as 'online' | 'paused' | 'offline',
+          latitude: Number(v.latitude),
+          longitude: Number(v.longitude),
+          categories: v.categorias || [],
+          avatar: v.foto_url
+        }));
 
-    console.log(`📡 [CLIENTE] Sucesso! Vendedores encontrados: ${formattedVendors.length}`);
-    setVendors(formattedVendors);
-  } catch (err: any) {
-    // Esse log vai te mostrar se o erro 500 tem uma mensagem interna do servidor
-    console.log("❌ [ERRO DETALHADO]:", err.response?.data || err.message);
-  }
-};
+        // 2. Formata as Barracas Fixas vindas do endpoint de estabelecimentos
+        // O Swagger do Allan mostra que o retorno é { stands: [ { vendor_id, latitude, longitude } ] }
+        const standsArray = barracasRes.data?.stands || [];
+        const listaBarracas = standsArray.map((b: any, index: number) => ({
+          id: b.vendor_id || `barraca-${index}`,
+          name: b.establishment_name || `Barraca de Praia`, // Se a rota geral não der o nome, depois o BottomSheet busca pelo ID
+          type: 'barraca' as const,
+          status: 'online' as const, // Barraca fixa cadastrada assume-se online/visível
+          latitude: Number(b.latitude),
+          longitude: Number(b.longitude),
+          categories: b.categories || [], // Se houver categorias cadastradas na barraca
+          avatar: undefined
+        }));
+
+        // 3. Junta as duas listas no estado do componente
+        const todosOsVendedores = [...listaAmbulantes, ...listaBarracas];
+        
+        console.log(`📡 [CLIENTE] Mapa atualizado! Ambulantes: ${listaAmbulantes.length} | Barracas: ${listaBarracas.length}`);
+        setVendors(todosOsVendedores);
+
+      } catch (err: any) {
+        console.log("❌ [ERRO AO CARREGAR MAPA VENDEDORES]:", err.response?.data || err.message);
+      }
+    };
 
     if (location) {
-      fetchVendors();
-      const interval = setInterval(fetchVendors, 15000); // Atualiza a cada 15s
+      fetchVendorsAndStands();
+      const interval = setInterval(fetchVendorsAndStands, 15000); // Mantém atualizando a cada 15s
       return () => clearInterval(interval);
     }
   }, [location]);
@@ -182,10 +200,25 @@ export default function Mapa() {
   const handleClearCategories = () => {
     setSelectedCategories([]);
   };
-  const handleMarkerPress = (vendor: Vendor) => {
+  const handleMarkerPress = async (vendor: Vendor) => {
     setSelectedVendor(vendor);
-    // Verificar se é barraca ou ambulante
+    
     if (vendor.type === 'barraca') {
+      try {
+        // Busca se o cliente já está associado a esta barraca específica
+        const resDetalhes = await barracaService.obterDetalhesBarraca(vendor.id);
+        setAssociationStatus(resDetalhes.data?.association_status || 'none');
+
+        // AC04: Busca se o cliente tem qualquer outra associação ativa no app
+        const resMinhaAssoc = await barracaService.obterMinhaAssociacao();
+        if (resMinhaAssoc.data && resMinhaAssoc.data !== "") {
+          setHasAnyActiveAssoc(true);
+        } else {
+          setHasAnyActiveAssoc(false);
+        }
+      } catch (error) {
+        console.error("Erro ao checar dados de associação:", error);
+      }
       setShowBarracaSheet(true);
     }
   };
@@ -212,6 +245,39 @@ export default function Mapa() {
         }
       ]
     );
+  };
+
+  // REPE-253 & REPE-254: Chamada ao confirmar no modal
+  const handleConfirmarAssociacao = async () => {
+    if (!selectedVendor) return;
+    setLoadingBtn(true);
+    setShowConfirmModal(false); // REPE-254: Fecha o pop-up
+
+    try {
+      // Importe o barracaService no topo do arquivo se ainda não importou
+      await barracaService.criarAssociacao(selectedVendor.id);
+      
+      // REPE-254: Atualiza o estado na hora sem dar refresh
+      setAssociationStatus('ativa');
+      setHasAnyActiveAssoc(true);
+      Alert.alert("Sucesso", "Associação realizada com sucesso!");
+    } catch (error) {
+      // REPE-256 (EX01): Tratamento de erro
+      Alert.alert("Erro", "Não foi possível se associar no momento. Tente novamente.");
+    } finally {
+      setLoadingBtn(false);
+    }
+  };
+
+  // Esta é a função que o TypeScript não estava achando!
+  const handleBotaoAssociarPress = () => {
+    // AC04: Bloqueia se já tiver outra associação ativa
+    if (hasAnyActiveAssoc && associationStatus !== 'ativa') {
+      Alert.alert("Bloqueado", "Você já possui uma associação ativa com outra barraca.");
+      return;
+    }
+    // REPE-252: Abre o pop-up de confirmação
+    setShowConfirmModal(true);
   };
 
   const handlePedirPress = () => {
@@ -402,11 +468,13 @@ export default function Mapa() {
       {/* Bottom Sheet Barraca */}
       {selectedVendor && selectedVendor.type === 'barraca' && (
         <BottomSheetBarraca
-          visible={showBarracaSheet}
           vendorId={selectedVendor.id}
           onClose={handleCloseCard}
+          onAssociate={handleBotaoAssociarPress}
+          onOpenChat={() => Alert.alert("Chat", "Abrindo conversa com a barraca...")}
         />
       )}
+      
     </View>
   );
 }
@@ -587,5 +655,62 @@ const styles = StyleSheet.create({
   },
   pedirButtonTextDisabled: {
     color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 25,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  btnCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    marginRight: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    alignItems: 'center',
+  },
+  btnCancelText: {
+    color: '#666',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  btnConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    marginLeft: 10,
+    backgroundColor: '#E95822',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  btnConfirmText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

@@ -67,4 +67,18 @@ export const barracaService = {
   listarTodasBarracas: async () => {
     return api.get('/barraca/get-all-stands');
   },
+
+  // associação na barraca
+
+  criarAssociacao: async (vendorId) => {
+    return api.post(`/cliente/associations?vendor_id=${vendorId}`);
+  },
+
+  obterMinhaAssociacao: async () => {
+    return api.get('/cliente/my-association');
+  },
+
+  deletarAssociacao: async () => {
+    return api.delete('/cliente/association');
+  }
 };

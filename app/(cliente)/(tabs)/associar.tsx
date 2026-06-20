@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '../../../services/authService';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface EstablishmentDetails {
   vendor_id: string;
@@ -23,14 +23,16 @@ export default function Associar() {
   const [association, setAssociation] = useState<EstablishmentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [disassociating, setDisassociating] = useState(false);
-
-  useEffect(() => {
-    fetchAssociation();
-  }, []);
+  
+  useFocusEffect(
+    useCallback(() => {
+      fetchAssociation();
+    }, [])
+  );
 
   const fetchAssociation = async () => {
     try {
-      // Tenta buscar associação do cliente
+      // Dica extra: Verifique se aqui deve ser authService ou o barracaService.obterMinhaAssociacao()
       const response = await authService.getClientAssociation();
 
       if (response.data && response.data.vendor_id) {
@@ -39,7 +41,6 @@ export default function Associar() {
         setAssociation(null);
       }
     } catch (error: any) {
-      // Se retornar 404, significa que não há associação
       if (error.response?.status === 404) {
         setAssociation(null);
       } else {
@@ -49,7 +50,6 @@ export default function Associar() {
       setLoading(false);
     }
   };
-
   const handleDisassociate = () => {
     Alert.alert(
       'Desassociar',
