@@ -20,7 +20,7 @@ interface BottomSheetBarracaProps {
   vendorId: string;
   onClose: () => void;
   onAssociate: () => void;
-  onOpenChat: () => void;
+  onOpenChat: (associationId: string) => void;
 }
 
 interface EstablishmentDetails {
@@ -30,6 +30,7 @@ interface EstablishmentDetails {
   establishment_photos: string[];
   menu_photos: string[];
   association_status: 'none' | 'this' | 'other';
+  association_id?: string;
 }
 
 export default function BottomSheetBarraca({
@@ -155,7 +156,16 @@ export default function BottomSheetBarraca({
     switch (details.association_status) {
       case 'this':
         return (
-          <TouchableOpacity style={styles.actionButton} onPress={onOpenChat}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (details.association_id) {
+                onOpenChat(details.association_id);
+              } else {
+                Alert.alert('Erro', 'ID de associação não encontrado');
+              }
+            }}
+          >
             <MaterialCommunityIcons name="chat" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Chat</Text>
           </TouchableOpacity>

@@ -29,13 +29,13 @@ interface ChargeData {
   pix_key: string;
 }
 
-export default function ModalEncerrarCliente({
+const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   visible,
   associationId,
   establishmentName,
   onClose,
   onSuccess,
-}: ModalEncerrarClienteProps) {
+}, ref) => {
   const [state, setState] = useState<ModalState>('confirm');
   const [loading, setLoading] = useState(false);
   const [chargeData, setChargeData] = useState<ChargeData | null>(null);
@@ -115,7 +115,7 @@ export default function ModalEncerrarCliente({
 
   // Exportar método para ser chamado pelo componente pai
   React.useImperativeHandle(
-    React.useRef(),
+    ref,
     () => ({
       handleChargeSent,
     }),
@@ -230,7 +230,9 @@ export default function ModalEncerrarCliente({
   }
 
   return null;
-}
+});
+
+export default ModalEncerrarCliente;
 
 const styles = StyleSheet.create({
   overlay: {

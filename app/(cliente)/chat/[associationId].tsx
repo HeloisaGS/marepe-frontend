@@ -12,6 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -77,7 +79,9 @@ export default function ChatScreen() {
     try {
       const { authService } = await import('../../../services/authService');
       const response = await authService.getClientAssociation();
-      setEstablishmentData(response);
+      console.log('📋 Dados do estabelecimento:', response.data);
+      console.log('🍽️ Fotos do cardápio:', response.data?.menu_photos);
+      setEstablishmentData(response.data);
     } catch (error) {
       console.error('Erro ao carregar dados do estabelecimento:', error);
     }
@@ -109,26 +113,48 @@ export default function ChatScreen() {
   };
 
   const sendMessage = async () => {
-    if (!inputText.trim() || sending) return;
+    console.log('📤 sendMessage chamado');
+    console.log('📝 inputText:', inputText);
+    console.log('📨 sending:', sending);
+
+    if (!inputText.trim()) {
+      console.log('⚠️ Texto vazio, abortando');
+      return;
+    }
+
+    if (sending) {
+      console.log('⚠️ Já está enviando, abortando');
+      return;
+    }
+
+    const messageText = inputText.trim();
 
     try {
       setSending(true);
+      console.log('👤 currentUserId:', currentUserId);
+      console.log('🔗 associationId:', associationId);
+
       const tempMessage: Message = {
         id: Date.now().toString(),
         association_id: associationId as string,
         sender_id: currentUserId!,
         message_type: 'text',
-        content: inputText.trim(),
+        content: messageText,
         created_at: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, tempMessage]);
+      // Limpa o input e fecha o teclado ANTES de adicionar a mensagem
       setInputText('');
+      Keyboard.dismiss();
+
+      setMessages((prev) => [...prev, tempMessage]);
       setTimeout(() => scrollToBottom(), 100);
 
-      await chatService.sendTextMessage(associationId as string, inputText.trim());
+      console.log('🌐 Enviando para API...');
+      await chatService.sendTextMessage(associationId as string, messageText);
+      console.log('✅ Mensagem enviada com sucesso');
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('❌ Erro ao enviar mensagem:', error);
       showToast('Erro ao enviar mensagem', 'error');
     } finally {
       setSending(false);
@@ -171,6 +197,23 @@ export default function ChatScreen() {
         <MaterialCommunityIcons name="chat" size={20} color="#FFF" />
         <Text style={styles.minimizedText}>{establishmentData?.establishment_name || 'Chat'}</Text>
         <Text style={styles.minimizedLabel}>Atendimento ativo</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  // Se minimizado, mostrar apenas barra flutuante
+  if (minimized) {
+    return (
+      <TouchableOpacity
+        style={styles.minimizedBar}
+        onPress={() => setMinimized(false)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.minimizedContent}>
+          <MaterialCommunityIcons name="chat" size={24} color="#FFF" />
+          <Text style={styles.minimizedText}>{establishmentData?.establishment_name || 'Chat'}</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-up" size={24} color="#FFF" />
       </TouchableOpacity>
     );
   }
@@ -242,32 +285,61 @@ export default function ChatScreen() {
               renderItem={renderMessage}
               contentContainerStyle={styles.messagesList}
               onContentSizeChange={() => scrollToBottom()}
+              keyboardShouldPersistTaps="handled"
             />
           )}
 
           {/* Input Area */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Digite sua mensagem..."
-              placeholderTextColor="#999"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-              onPress={sendMessage}
-              disabled={!inputText.trim() || sending}
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <MaterialCommunityIcons name="send" size={20} color="#FFF" />
-              )}
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView behavior="padding">
+            <View style={styles.inputContainer}>
+              <TouchableOpacity
+                style={styles.keyboardDismissButton}
+                onPress={() => {
+                  console.log('⌨️ Fechando teclado manualmente');
+                  Keyboard.dismiss();
+                }}
+              >
+                <MaterialCommunityIcons name="keyboard-off" size={20} color="#666" />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                placeholder="Digite sua mensagem..."
+                placeholderTextColor="#999"
+                value={inputText}
+                onChangeText={(text) => {
+                  console.log('⌨️ Texto digitado:', text);
+                  setInputText(text);
+                }}
+                onFocus={() => console.log('🎯 Input focado')}
+                onBlur={() => console.log('🎯 Input desfocado')}
+                onSubmitEditing={() => {
+                  console.log('🎯 Submit do input');
+                  if (inputText.trim()) {
+                    sendMessage();
+                  }
+                }}
+                blurOnSubmit={true}
+                multiline={false}
+                maxLength={500}
+                editable={true}
+                returnKeyType="send"
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+                onPress={() => {
+                  console.log('👆 Botão Send pressionado');
+                  sendMessage();
+                }}
+                disabled={!inputText.trim() || sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <MaterialCommunityIcons name="send" size={20} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </>
       ) : (
         // Cardápio View
@@ -459,12 +531,16 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     backgroundColor: '#FFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    gap: 8,
+  },
+  keyboardDismissButton: {
+    padding: 8,
   },
   input: {
     flex: 1,
@@ -525,15 +601,27 @@ const styles = StyleSheet.create({
   },
   minimizedBar: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 80,
+    left: 16,
+    right: 16,
     backgroundColor: '#E95822',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  minimizedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   minimizedText: {
     fontSize: 14,

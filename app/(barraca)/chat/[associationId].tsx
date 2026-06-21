@@ -12,6 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -113,6 +115,8 @@ export default function VendorChatScreen() {
   const sendMessage = async () => {
     if (!inputText.trim() || sending) return;
 
+    const messageText = inputText.trim();
+
     try {
       setSending(true);
       const tempMessage: Message = {
@@ -120,15 +124,18 @@ export default function VendorChatScreen() {
         association_id: associationId as string,
         sender_id: currentUserId!,
         message_type: 'text',
-        content: inputText.trim(),
+        content: messageText,
         created_at: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, tempMessage]);
+      // Limpa o input e fecha o teclado ANTES
       setInputText('');
+      Keyboard.dismiss();
+
+      setMessages((prev) => [...prev, tempMessage]);
       setTimeout(() => scrollToBottom(), 100);
 
-      await chatService.sendTextMessage(associationId as string, inputText.trim());
+      await chatService.sendTextMessage(associationId as string, messageText);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       showToast('Erro ao enviar mensagem', 'error');
@@ -287,41 +294,60 @@ export default function VendorChatScreen() {
       )}
 
       {/* Input Area */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity
-          style={styles.photoButton}
-          onPress={pickImage}
-          disabled={uploadingPhoto}
-        >
-          {uploadingPhoto ? (
-            <ActivityIndicator size="small" color="#E95822" />
-          ) : (
-            <MaterialCommunityIcons name="camera" size={24} color="#E95822" />
-          )}
-        </TouchableOpacity>
+      <KeyboardAvoidingView behavior="padding">
+        <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.photoButton}
+            onPress={() => {
+              Keyboard.dismiss(); // Fecha teclado antes de abrir galeria
+              pickImage();
+            }}
+            disabled={uploadingPhoto}
+          >
+            {uploadingPhoto ? (
+              <ActivityIndicator size="small" color="#E95822" />
+            ) : (
+              <MaterialCommunityIcons name="camera" size={24} color="#E95822" />
+            )}
+          </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Digite sua mensagem..."
-          placeholderTextColor="#999"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
+          <TouchableOpacity
+            style={styles.keyboardDismissButton}
+            onPress={() => Keyboard.dismiss()}
+          >
+            <MaterialCommunityIcons name="keyboard-off" size={20} color="#666" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={!inputText.trim() || sending}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <MaterialCommunityIcons name="send" size={20} color="#FFF" />
-          )}
-        </TouchableOpacity>
-      </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite sua mensagem..."
+            placeholderTextColor="#999"
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={() => {
+              if (inputText.trim()) {
+                sendMessage();
+              }
+            }}
+            blurOnSubmit={true}
+            multiline={false}
+            maxLength={500}
+            returnKeyType="send"
+          />
+
+          <TouchableOpacity
+            style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={sendMessage}
+            disabled={!inputText.trim() || sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <MaterialCommunityIcons name="send" size={20} color="#FFF" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
       {/* Lightbox para fotos */}
       <Modal visible={!!selectedPhoto} transparent animationType="fade">
@@ -461,19 +487,22 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     backgroundColor: '#FFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    gap: 8,
   },
   photoButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+  },
+  keyboardDismissButton: {
+    padding: 8,
   },
   input: {
     flex: 1,

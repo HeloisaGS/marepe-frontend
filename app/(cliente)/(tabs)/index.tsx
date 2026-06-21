@@ -446,6 +446,66 @@ export default function Mapa() {
           visible={showBarracaSheet}
           vendorId={selectedVendor.id}
           onClose={handleCloseCard}
+          onAssociate={() => {
+            // Atualizar lista após associação
+            setShowBarracaSheet(false);
+            setSelectedVendor(null);
+            // Recarregar vendedores para pegar novo status
+            if (location) {
+              const fetchVendors = async () => {
+                const barracasResponse = await api.get('/barraca/get-all-stands');
+                const todasBarracas = barracasResponse.data?.stands || [];
+                const RADIUS_KM = 2;
+                const nearbyBarracas = todasBarracas.filter((stand: any) => {
+                  const distance = calculateDistance(
+                    location.latitude,
+                    location.longitude,
+                    stand.latitude,
+                    stand.longitude
+                  );
+                  return distance <= RADIUS_KM;
+                });
+                const formattedVendors = await Promise.all(
+                  nearbyBarracas.map(async (stand: any) => {
+                    try {
+                      const details = await authService.getEstablishmentDetails(stand.vendor_id);
+                      return {
+                        id: stand.vendor_id,
+                        name: details.data.establishment_name || 'Barraca',
+                        type: 'barraca',
+                        status: 'online',
+                        latitude: Number(stand.latitude),
+                        longitude: Number(stand.longitude),
+                        categories: [],
+                        avatar: details.data.establishment_photos?.[0] || null,
+                      };
+                    } catch (err) {
+                      return {
+                        id: stand.vendor_id,
+                        name: 'Barraca',
+                        type: 'barraca',
+                        status: 'online',
+                        latitude: Number(stand.latitude),
+                        longitude: Number(stand.longitude),
+                        categories: [],
+                        avatar: null,
+                      };
+                    }
+                  })
+                );
+                setVendors(formattedVendors);
+              };
+              fetchVendors();
+            }
+          }}
+          onOpenChat={(associationId) => {
+            // Navegação para chat
+            if (associationId) {
+              router.push(`/(cliente)/chat/${associationId}`);
+            } else {
+              Alert.alert('Erro', 'ID de associação não encontrado');
+            }
+          }}
         />
       )}
     </View>
