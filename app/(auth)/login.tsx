@@ -48,11 +48,25 @@ export default function Login() {
         response?.data?.session?.user?.user_metadata?.role ||
         '';
 
-      console.log('Role extraído do login:', role);
+      const userId =
+        response?.data?.user?.id ||
+        response?.data?.session?.user?.id ||
+        '';
 
-      // Salvar o role também para verificação futura
+      const userName =
+        response?.data?.user?.user_metadata?.nome ||
+        response?.data?.session?.user?.user_metadata?.nome ||
+        '';
+
+      console.log('Role extraído do login:', role);
+      console.log('UserId extraído do login:', userId);
+      console.log('UserName extraído do login:', userName);
+
+      // Salvar dados do usuário
       await AsyncStorage.setItem('userRole', role);
-      console.log('✅ Role salvo:', role);
+      await AsyncStorage.setItem('userId', userId);
+      await AsyncStorage.setItem('userName', userName);
+      console.log('✅ Dados salvos: role, userId, userName');
 
       router.push({
         pathname: '/(auth)/sucesso',

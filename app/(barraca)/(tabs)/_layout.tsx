@@ -10,18 +10,11 @@ export default function TabsBarracaLayout() {
       headerShown: false,
       
     }}>
-      <Tabs.Screen name="index" 
-        options={{ 
+      <Tabs.Screen name="index"
+        options={{
           title: 'Mapa',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="map-marker" size={size} color={color} />
-          )
-        }} />
-      <Tabs.Screen name="estabelecimento" 
-        options={{ 
-          title: 'Estabelecimento',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="folder" size={size} color={color} />
           )
         }} />
       <Tabs.Screen name="associados" 

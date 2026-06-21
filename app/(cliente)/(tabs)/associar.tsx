@@ -34,8 +34,12 @@ export default function Associar() {
       // Tenta buscar associação do cliente
       const response = await authService.getClientAssociation();
 
-      if (response.data && response.data.vendor_id) {
-        setAssociation(response.data);
+      // authService.getClientAssociation retorna o axios response
+      // Dados estão em response.data
+      const data = response.data;
+
+      if (data && data.vendor_id) {
+        setAssociation(data);
       } else {
         setAssociation(null);
       }
@@ -45,6 +49,8 @@ export default function Associar() {
         setAssociation(null);
       } else {
         console.error('Erro ao buscar associação:', error);
+        // Mesmo com erro, não travar a tela
+        setAssociation(null);
       }
     } finally {
       setLoading(false);

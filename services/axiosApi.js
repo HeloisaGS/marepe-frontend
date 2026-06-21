@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://marepe-backend.
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 segundos para desistir se o Render estiver dormindo
+  timeout: 30000, // 30 segundos para cold start do Render (plano gratuito)
   headers: {
     'Content-Type': 'application/json',
   }

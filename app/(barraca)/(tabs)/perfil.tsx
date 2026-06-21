@@ -1,21 +1,97 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { MOCK_PERFIL } from '../../../constants/mock'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LogoMaré from '../../../assets/images/logo.png';
 import { authService } from '../../../services/authService';
+import api from '../../../services/api';
 
 export default function Perfil() {
-   const handleLogout = async () => {
-      try {
-        if (authService?.logout) await authService.logout();
-      } catch (error) {
-        console.error("Erro no logout:", error);
-      } finally {
-        router.replace('/(auth)');
+  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [associatedCustomers, setAssociatedCustomers] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadProfileData();
+    loadAssociatedCustomers();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      // Buscar userId - pode estar em diferentes keys
+      let userId = await AsyncStorage.getItem('userId');
+
+      // Fallback: tentar buscar do userToken decodificado
+      if (!userId) {
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          // Token JWT tem 3 partes separadas por '.'
+          try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload));
+            userId = decoded.sub || decoded.user_id;
+          } catch (e) {
+            console.log('Não foi possível decodificar token');
+          }
+        }
       }
-    };
+
+      const userName = await AsyncStorage.getItem('userName');
+
+      if (!userId) {
+        // Se não tem userId, usa dados de fallback
+        console.warn('UserId não encontrado no AsyncStorage');
+        setProfileData({
+          nome: userName || 'Usuário',
+          nome_barraca: 'Minha Barraca',
+          foto_url: null,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Buscar dados do vendedor
+      const response = await api.get(`/barraca/${userId}`);
+
+      setProfileData({
+        nome: userName || response.data.owner_name || 'Usuário',
+        nome_barraca: response.data.establishment_name || 'Minha Barraca',
+        foto_url: response.data.establishment_photos?.[0] || null,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+      // Dados de fallback
+      const userName = await AsyncStorage.getItem('userName');
+      setProfileData({
+        nome: userName || 'Usuário',
+        nome_barraca: 'Minha Barraca',
+        foto_url: null,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAssociatedCustomers = async () => {
+    try {
+      const response = await authService.getBarracaAssociations();
+      setAssociatedCustomers(response.data.customers || []);
+    } catch (error) {
+      console.error('Erro ao carregar associados:', error);
+      setAssociatedCustomers([]);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (authService?.logout) await authService.logout();
+    } catch (error) {
+      console.error("Erro no logout:", error);
+    } finally {
+      router.replace('/(auth)');
+    }
+  };
   
     // Função para renderizar estrelas baseado na nota
     const renderStars = (rating: number) => {
@@ -33,19 +109,28 @@ export default function Perfil() {
       return stars;
     };
   
+  if (loading) {
     return (
-    <ScrollView 
-      style={styles.container} 
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#E95822" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Carregando perfil...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={{ flexGrow: 1 }}
     >
       {/* Topo Bege */}
       <View style={styles.header}>
         <Image source={LogoMaré} style={styles.logo} resizeMode="contain" />
       </View>
-      
+
       <View style={styles.bemVindoContainer}>
         <Text style={styles.bemVindoTexto}>
-          Bem vindo, <Text style={styles.nomeDestaque}>{MOCK_PERFIL.nome.split(' ')[0]}</Text>
+          Bem vindo, <Text style={styles.nomeDestaque}>{profileData?.nome?.split(' ')[0] || 'Usuário'}</Text>
         </Text>
       </View>
 
@@ -63,50 +148,59 @@ export default function Perfil() {
         
         {/* Avatar Circular com Fallback */}
         <View style={styles.avatarContainer}>
-          {MOCK_PERFIL.foto_url ? (
-            <Image source={{ uri: MOCK_PERFIL.foto_url }} style={styles.avatar} />
+          {profileData?.foto_url ? (
+            <Image source={{ uri: profileData.foto_url }} style={styles.avatar} />
           ) : (
             <MaterialCommunityIcons name="account" size={100} color="#000" />
           )}
         </View>
 
-        {/* Seção: Seus estabelecimentos */}
+        {/* Seção: Seu estabelecimento */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seus estabelecimentos</Text>
+          <Text style={styles.sectionTitle}>Seu estabelecimento</Text>
           <View style={styles.card}>
             <View style={styles.cardInfo}>
-              <Text style={styles.cardMainText}>{MOCK_PERFIL.nome_barraca}</Text>
-              <Text style={styles.cardSubText}>{MOCK_PERFIL.local_atual}</Text>
+              <Text style={styles.cardMainText}>{profileData?.nome_barraca}</Text>
+              <Text style={styles.cardSubText}>Barraca fixa</Text>
             </View>
-            <View style={styles.starsRow}>
-              {renderStars(MOCK_PERFIL.avaliacao)}
-            </View>
+            <MaterialCommunityIcons name="store" size={32} color="#E95822" />
           </View>
         </View>
 
-        {/* Seção: Usuários associados hoje (DINÂMICO COM MAP) */}
+        {/* Seção: Clientes associados */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Usuários associados hoje</Text>
-          
-          {MOCK_PERFIL.associados.map((associado) => (
-            <View key={associado.id} style={styles.card}>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardMainText}>{associado.nome}</Text>
-                <Text style={styles.cardSubText}>{associado.email}</Text>
-              </View>
-              
-              <TouchableOpacity style={styles.actionColumn}>
-                <MaterialCommunityIcons 
-                  name="map-marker" 
-                  size={24} 
-                  color={associado.status === "Ativo" ? "red" : "#FAD4B0"} 
-                />
-                <Text style={styles.actionText}>
-                  {associado.status === "Ativo" ? "ver no mapa" : "deixar de ver"}
-                </Text>
-              </TouchableOpacity>
+          <Text style={styles.sectionTitle}>
+            Clientes associados ({associatedCustomers.length})
+          </Text>
+
+          {associatedCustomers.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <MaterialCommunityIcons name="account-off-outline" size={40} color="#CCC" />
+              <Text style={styles.emptyText}>Nenhum cliente associado</Text>
             </View>
-          ))}
+          ) : (
+            associatedCustomers.map((customer) => (
+              <TouchableOpacity
+                key={customer.association_id}
+                style={styles.card}
+                onPress={() => router.push(`/(barraca)/chat/${customer.association_id}`)}
+              >
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardMainText}>{customer.nome}</Text>
+                  <Text style={styles.cardSubText}>
+                    {new Date(customer.horario_associacao).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+
+                <MaterialCommunityIcons name="chat" size={24} color="#E95822" />
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* Rodapé Logout */}
@@ -177,9 +271,18 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardMainText: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   cardSubText: { fontSize: 14, color: '#666' },
-  starsRow: { flexDirection: 'row' },
-  actionColumn: { alignItems: 'center', minWidth: 80 },
-  actionText: { fontSize: 10, color: '#333', marginTop: 2, textAlign: 'center' },
+  emptyCard: {
+    backgroundColor: '#F2F2F2',
+    borderRadius: 15,
+    padding: 30,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 10,
+  },
   footer: { alignItems: 'center', marginTop: 20, paddingBottom: 40 },
   versao: { fontSize: 14, color: '#999', marginBottom: 10 },
   logoutButton: { flexDirection: 'row', alignItems: 'center' },

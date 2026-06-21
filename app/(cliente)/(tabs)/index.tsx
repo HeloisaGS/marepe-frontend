@@ -16,6 +16,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CardapioModal from '../cardapio-modal';
 import CategoryFilter from '../../../components/CategoryFilter';
 import BottomSheetBarraca from '../../../components/BottomSheetBarraca';
+import api from '../../../services/api';
+
+// Função para calcular distância entre dois pontos (em km)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 // Types
 interface Vendor {
@@ -116,39 +130,66 @@ export default function Mapa() {
     const fetchVendors = async () => {
   if (!location) return;
 
-  // LOG PARA VOCÊ VER NO TERMINAL O QUE O CLIENTE ESTÁ PEDINDO
-  console.log(`🔎 Buscando perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+  console.log(`🔎 Buscando vendedores perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
 
   try {
-    const response = await authService.getNearbyVendors(
-      location.latitude,
-      location.longitude,
-      2000 // 2km
+    // SOLUÇÃO TEMPORÁRIA: Buscar TODAS as barracas cadastradas
+    // (funciona independente da função RPC do Supabase)
+    const barracasResponse = await api.get('/barraca/get-all-stands');
+    const todasBarracas = barracasResponse.data?.stands || [];
+
+    console.log(`📍 Total de barracas cadastradas: ${todasBarracas.length}`);
+
+    // Filtrar barracas próximas (raio de 2km)
+    const RADIUS_KM = 2;
+    const nearbyBarracas = todasBarracas.filter((stand: any) => {
+      const distance = calculateDistance(
+        location.latitude,
+        location.longitude,
+        stand.latitude,
+        stand.longitude
+      );
+      return distance <= RADIUS_KM;
+    });
+
+    console.log(`📡 Barracas próximas (${RADIUS_KM}km): ${nearbyBarracas.length}`);
+
+    // Buscar dados detalhados de cada barraca próxima
+    const formattedVendors = await Promise.all(
+      nearbyBarracas.map(async (stand: any) => {
+        try {
+          const details = await authService.getEstablishmentDetails(stand.vendor_id);
+          return {
+            id: stand.vendor_id,
+            name: details.data.establishment_name || 'Barraca',
+            type: 'barraca',
+            status: 'online',
+            latitude: Number(stand.latitude),
+            longitude: Number(stand.longitude),
+            categories: [],
+            avatar: details.data.establishment_photos?.[0] || null,
+          };
+        } catch (err) {
+          console.log(`Erro ao buscar detalhes de ${stand.vendor_id}:`, err);
+          return {
+            id: stand.vendor_id,
+            name: 'Barraca',
+            type: 'barraca',
+            status: 'online',
+            latitude: Number(stand.latitude),
+            longitude: Number(stand.longitude),
+            categories: [],
+            avatar: null,
+          };
+        }
+      })
     );
 
-    // Se chegar aqui, o erro 500 sumiu!
-    const formattedVendors = response.data.map((v: any, index: number) => ({
-    // A API retorna vendor_id, não id
-    id: v.vendor_id || `temp-${index}`, 
-    
-    // Como a API de localização NÃO retorna o nome no JSON que você mostrou,
-    // vamos colocar um nome padrão. 
-    // DICA: Verifique se v.vendedor?.nome_barraca existe no retorno real
-    name: v.nome_barraca || v.nome || `Vendedor ${index + 1}`,
-    
-    type: v.tipo || 'ambulante',
-    status: v.status || 'online',
-    latitude: Number(v.latitude),
-    longitude: Number(v.longitude),
-    categories: v.categorias || [],
-    avatar: v.foto_url
-  }));
-
-    console.log(`📡 [CLIENTE] Sucesso! Vendedores encontrados: ${formattedVendors.length}`);
+    console.log(`✅ Vendedores formatados: ${formattedVendors.length}`);
     setVendors(formattedVendors);
   } catch (err: any) {
-    // Esse log vai te mostrar se o erro 500 tem uma mensagem interna do servidor
-    console.log("❌ [ERRO DETALHADO]:", err.response?.data || err.message);
+    console.log("❌ [ERRO]:", err.response?.data || err.message);
+    console.log("Stack:", err.stack);
   }
 };
 
