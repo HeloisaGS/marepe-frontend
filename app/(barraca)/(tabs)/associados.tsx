@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { authService } from '../../../services/authService';
 
 interface AssociatedCustomer {
@@ -65,7 +66,10 @@ export default function Associados() {
   };
 
   const renderCustomerCard = ({ item }: { item: AssociatedCustomer }) => (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push(`/(barraca)/chat/${item.association_id}`)}
+    >
       <View style={styles.cardLeft}>
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons name="account" size={24} color="#E95822" />
@@ -77,7 +81,8 @@ export default function Associados() {
           </Text>
         </View>
       </View>
-    </View>
+      <MaterialCommunityIcons name="chat" size={24} color="#E95822" />
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (

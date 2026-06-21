@@ -13,6 +13,7 @@ import { authService } from '../../../services/authService';
 import { router } from 'expo-router';
 
 interface EstablishmentDetails {
+  association_id: string;
   vendor_id: string;
   establishment_name: string;
   owner_name: string;
@@ -138,7 +139,7 @@ export default function Associar() {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.chatButton}
-              onPress={() => router.push(`/(cliente)/chat/${association.vendor_id}`)}
+              onPress={() => router.push(`/(cliente)/chat/${association.association_id}`)}
             >
               <MaterialCommunityIcons name="chat" size={20} color="#FFF" />
               <Text style={styles.chatButtonText}>Abrir Chat</Text>
