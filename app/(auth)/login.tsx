@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoMaré from '../../assets/images/logo.png';
 import { authService } from '../../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setSupabaseAuth } from '../../services/supabase';
 
 export default function Login() {
   const { emailDigitado } = useLocalSearchParams();
@@ -38,6 +39,7 @@ export default function Login() {
       const token = typeof tokenBruto === 'string' ? tokenBruto : String(tokenBruto);
 
       await AsyncStorage.setItem('userToken', token);
+      await setSupabaseAuth(token);
       console.log('✅ Token salvo:', token.substring(0, 30) + '...');
       console.log('✅ Tamanho do token:', token.length);
       // ------------------------------------

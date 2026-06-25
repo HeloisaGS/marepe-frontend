@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TextInput,
   Image,
   ActivityIndicator,
   Alert,
@@ -13,6 +12,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api';
+import NumericKeypad from './NumericKeypad';
 
 interface ModalEncerrarAssociacaoProps {
   visible: boolean;
@@ -29,7 +29,7 @@ export default function ModalEncerrarAssociacao({
   onClose,
   onSuccess,
 }: ModalEncerrarAssociacaoProps) {
-  const [chargeAmount, setChargeAmount] = useState('');
+  const [chargeAmountCents, setChargeAmountCents] = useState(0);
   const [chargePhoto, setChargePhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [awaitingPayment, setAwaitingPayment] = useState(false);
@@ -57,9 +57,7 @@ export default function ModalEncerrarAssociacao({
   };
 
   const handleConfirm = async () => {
-    const amount = parseFloat(chargeAmount.replace(',', '.'));
-
-    if (isNaN(amount) || amount <= 0) {
+    if (chargeAmountCents <= 0) {
       Alert.alert('Valor inválido', 'Informe um valor válido.');
       return;
     }
@@ -72,6 +70,7 @@ export default function ModalEncerrarAssociacao({
     try {
       setLoading(true);
 
+      const amount = chargeAmountCents / 100;
       const formData = new FormData();
       formData.append('charge_amount', amount.toString());
       formData.append('charge_photo', {
@@ -138,7 +137,7 @@ export default function ModalEncerrarAssociacao({
   };
 
   const resetForm = () => {
-    setChargeAmount('');
+    setChargeAmountCents(0);
     setChargePhoto(null);
     setAwaitingPayment(false);
   };
@@ -178,13 +177,9 @@ export default function ModalEncerrarAssociacao({
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Valor do pedido (R$)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0,00"
-              placeholderTextColor="#999"
-              keyboardType="decimal-pad"
-              value={chargeAmount}
-              onChangeText={setChargeAmount}
+            <NumericKeypad
+              amountCents={chargeAmountCents}
+              onAmountChange={setChargeAmountCents}
             />
           </View>
 
@@ -215,10 +210,10 @@ export default function ModalEncerrarAssociacao({
               style={[
                 styles.button,
                 styles.buttonPrimary,
-                (!chargeAmount || !chargePhoto || loading) && styles.buttonDisabled,
+                (chargeAmountCents <= 0 || !chargePhoto || loading) && styles.buttonDisabled,
               ]}
               onPress={handleConfirm}
-              disabled={!chargeAmount || !chargePhoto || loading}
+              disabled={chargeAmountCents <= 0 || !chargePhoto || loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />

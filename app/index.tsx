@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { setSupabaseAuth } from '../services/supabase';
 
 export default function Index() {
   const [checking, setChecking] = useState(true);
@@ -28,6 +29,8 @@ export default function Index() {
         router.replace('/(auth)'); // Vai para (auth)/index.tsx - tela de email
         return;
       }
+
+      await setSupabaseAuth(token);
 
       // Se tem token, redireciona para a tela do perfil
       const roleNormalizado = role.toUpperCase();
