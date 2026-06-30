@@ -7,6 +7,7 @@ export const profileService = {
     nome?: string;
     telefone?: string;
     nome_barraca?: string;
+    alcance_km?: number;
     foto?: any;
   }) => {
     const formData = new FormData();
@@ -14,6 +15,7 @@ export const profileService = {
     if (data.nome) formData.append('nome', data.nome);
     if (data.telefone) formData.append('telefone', data.telefone);
     if (data.nome_barraca) formData.append('nome_barraca', data.nome_barraca);
+    if (data.alcance_km !== undefined) formData.append('alcance_km', String(data.alcance_km));
     if (data.foto) {
       formData.append('foto', {
         uri: data.foto.uri,

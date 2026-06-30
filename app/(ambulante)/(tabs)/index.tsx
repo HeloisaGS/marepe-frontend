@@ -18,6 +18,7 @@ import {
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../../../services/authService';
+import { profileService } from '../../../services/profileService';
 
 
 
@@ -65,6 +66,8 @@ export default function HomeAmbulante() {
   const [expandido, setExpandido] = useState(true);
   const [modalPermissaoVisivel, setModalPermissaoVisivel] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [alcanceKm, setAlcanceKm] = useState(2);
+  const [showAlcancePicker, setShowAlcancePicker] = useState(false);
   // para localização
   const [subscription, setSubscription] = useState<Location.LocationSubscription | null>(null);
   const [gpsRuim, setGpsRuim] = useState(false); 
@@ -194,6 +197,27 @@ export default function HomeAmbulante() {
     setLocation(locationActual);
   })();
 }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await profileService.getMeuPerfil();
+        if (res?.data?.vendedor?.alcance_km) {
+          setAlcanceKm(res.data.vendedor.alcance_km);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const alterarAlcance = async (novoKm: number) => {
+    try {
+      await profileService.atualizarPerfil({ alcance_km: novoKm });
+      setAlcanceKm(novoKm);
+      setShowAlcancePicker(false);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível atualizar o alcance.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -325,10 +349,59 @@ export default function HomeAmbulante() {
                 <Text style={styles.textoBotaoPadrao}>Pausar visibilidade</Text>
               </View>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.botaoPadrao, { backgroundColor: '#8B9A70', marginTop: 10 }]}
+              activeOpacity={0.8}
+              onPress={() => setShowAlcancePicker(true)}
+            >
+              <View style={styles.btnConteudo}>
+                <MaterialCommunityIcons name="map-marker-radius" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.textoBotaoPadrao}>Alcance: {alcanceKm} km</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         )}
       </View>
 
+      <Modal visible={showAlcancePicker} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <MaterialCommunityIcons name="map-marker-radius" size={48} color="#E05A3D" />
+            <Text style={styles.modalTitulo}>Raio de Atendimento</Text>
+            <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 15 }}>
+              Até que distância você pode atender?
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
+              {[1, 2, 3, 5, 10].map(km => (
+                <TouchableOpacity
+                  key={km}
+                  style={[
+                    styles.botaoPadrao,
+                    {
+                      backgroundColor: alcanceKm === km ? '#E05A3D' : '#F3F4F6',
+                      paddingVertical: 12,
+                      paddingHorizontal: 20,
+                      width: 70,
+                    },
+                  ]}
+                  onPress={() => alterarAlcance(km)}
+                >
+                  <Text style={{ color: alcanceKm === km ? '#FFF' : '#333', fontWeight: 'bold', fontSize: 16 }}>
+                    {km} km
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.botaoPadrao, { backgroundColor: '#F3F4F6', marginTop: 15 }]}
+              onPress={() => setShowAlcancePicker(false)}
+            >
+              <Text style={{ color: '#666', fontWeight: 'bold', fontSize: 16 }}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

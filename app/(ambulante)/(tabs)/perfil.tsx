@@ -8,6 +8,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +24,7 @@ type VendedorResponse = {
   telefone: string;
   foto_url: string | null;
   nome_barraca: string | null;
+  alcance_km: number | null;
 };
 
 type ProfileResponse = {
@@ -37,6 +40,8 @@ export default function PerfilAmbulante() {
   const [erro, setErro] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [modalAlcance, setModalAlcance] = useState(false);
+  const [alcanceInput, setAlcanceInput] = useState('2');
 
   useEffect(() => {
     carregarPerfil();
@@ -128,6 +133,25 @@ export default function PerfilAmbulante() {
     } catch (error: any) {
       console.error('Erro ao fazer upload da foto:', error);
       Alert.alert('Erro', 'Não foi possível atualizar a foto');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const salvarAlcance = async () => {
+    const km = parseInt(alcanceInput, 10);
+    if (isNaN(km) || km < 1 || km > 50) {
+      Alert.alert('Valor inválido', 'Digite um valor entre 1 e 50 km.');
+      return;
+    }
+    try {
+      setSalvando(true);
+      await profileService.atualizarPerfil({ alcance_km: km });
+      await carregarPerfil();
+      setModalAlcance(false);
+      Alert.alert('Sucesso', `Raio de atendimento atualizado para ${km} km.`);
+    } catch (error: any) {
+      Alert.alert('Erro', 'Não foi possível atualizar o alcance.');
     } finally {
       setSalvando(false);
     }
@@ -227,6 +251,23 @@ export default function PerfilAmbulante() {
         {/* Nome vindo da API */}
         <Text style={styles.vendedorNome}>{perfil.nome}</Text>
 
+        {/* Raio de atendimento */}
+        <Text style={styles.alcanceLabel}>
+          Raio de atendimento: {perfil.vendedor?.alcance_km ?? 2} km
+        </Text>
+        <TouchableOpacity
+          style={styles.categoriaBtn}
+          onPress={() => {
+            setAlcanceInput(String(perfil.vendedor?.alcance_km ?? 2));
+            setModalAlcance(true);
+          }}
+        >
+          <View style={styles.categoriaIconBg}>
+            <MaterialCommunityIcons name="map-marker-radius" size={30} color="#FFF" />
+          </View>
+          <Text style={styles.categoriaTexto}>Alterar alcance</Text>
+        </TouchableOpacity>
+
         {/* Alterar categorias */}
         <TouchableOpacity
           style={styles.categoriaBtn}
@@ -237,6 +278,40 @@ export default function PerfilAmbulante() {
           </View>
           <Text style={styles.categoriaTexto}>Alterar categorias</Text>
         </TouchableOpacity>
+
+        {/* Modal de alcance */}
+        <Modal visible={modalAlcance} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <MaterialCommunityIcons name="map-marker-radius" size={48} color="#E95822" />
+              <Text style={styles.modalTitle}>Raio de Atendimento</Text>
+              <Text style={styles.modalSubtitle}>
+                Defina a distância máxima (em km) que você pode atender os clientes.
+              </Text>
+              <TextInput
+                style={styles.alcanceInput}
+                keyboardType="numeric"
+                value={alcanceInput}
+                onChangeText={setAlcanceInput}
+                placeholder="2"
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalButtonNo}
+                  onPress={() => setModalAlcance(false)}
+                >
+                  <Text style={styles.modalButtonTextNo}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalButtonYes}
+                  onPress={salvarAlcance}
+                >
+                  <Text style={styles.modalButtonTextYes}>Salvar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Rodapé */}
         <Text style={styles.versao}>Versão 1.0.0</Text>
@@ -356,4 +431,18 @@ const styles = StyleSheet.create({
   versao: { fontSize: 14, color: '#999', marginTop: 40, marginBottom: 10 },
   logoutButton: { flexDirection: 'row', alignItems: 'center' },
   logoutText: { fontSize: 22, fontWeight: 'bold', color: '#E95822', marginLeft: 10 },
+  alcanceLabel: { fontSize: 16, color: '#333', marginTop: 20, marginBottom: 10 },
+  alcanceInput: {
+    width: '100%', borderWidth: 1, borderColor: '#DDD', borderRadius: 10,
+    padding: 15, fontSize: 18, textAlign: 'center', marginVertical: 15,
+  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '80%', backgroundColor: '#FFF', padding: 25, borderRadius: 16, alignItems: 'center', elevation: 10 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginVertical: 15, textAlign: 'center' },
+  modalSubtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 10 },
+  modalButtons: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginTop: 10 },
+  modalButtonNo: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 12, borderRadius: 8, marginRight: 8, alignItems: 'center' },
+  modalButtonYes: { flex: 1, backgroundColor: '#E95822', paddingVertical: 12, borderRadius: 8, marginLeft: 8, alignItems: 'center' },
+  modalButtonTextNo: { color: '#4B5563', fontWeight: 'bold', fontSize: 16 },
+  modalButtonTextYes: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 });

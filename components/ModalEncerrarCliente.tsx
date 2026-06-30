@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,8 @@ interface ChargeData {
   pix_key: string;
 }
 
+const POLL_INTERVAL = 3000;
+
 const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   visible,
   associationId,
@@ -40,6 +42,46 @@ const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   const [loading, setLoading] = useState(false);
   const [chargeData, setChargeData] = useState<ChargeData | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (state === 'waiting') {
+      pollRef.current = setInterval(async () => {
+        try {
+          const res = await api.get('/cliente/my-association');
+          const data = res.data;
+          if (data?.status === 'pending_payment' && data.pix_key) {
+            setChargeData({
+              charge_amount: data.charge_amount,
+              charge_photo_url: data.charge_photo_url,
+              pix_key: data.pix_key,
+            });
+            setState('payment');
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+          } else if (data?.status === 'closed') {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            Alert.alert('Atendimento encerrado', 'O barraqueiro encerrou o atendimento.');
+            handleClose();
+          }
+        } catch {
+          // association not found or error — stop polling
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }
+      }, POLL_INTERVAL);
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [state]);
 
   const handleRequestClose = async () => {
     try {
@@ -103,12 +145,20 @@ const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   };
 
   const handleClose = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
     resetModal();
     onClose();
   };
 
   // Método para receber evento Realtime de cobrança
   const handleChargeSent = (data: ChargeData) => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
     setChargeData(data);
     setState('payment');
   };

@@ -3,6 +3,48 @@ import api from './axiosApi';
 
 export const barracaService = {
   
+  atualizarBarraca: async (latitude, longitude, establishmentPhotos = null, menuPhotos = null) => {
+    const token = await AsyncStorage.getItem('userToken');
+
+    const formData = new FormData();
+    formData.append('latitude', latitude.toString());
+    formData.append('longitude', longitude.toString());
+    
+    if (establishmentPhotos && establishmentPhotos.length > 0) {
+      establishmentPhotos.forEach(photo => {
+        formData.append('establishment_photos', photo);
+      });
+    }
+
+    if (menuPhotos && menuPhotos.length > 0) {
+      menuPhotos.forEach(photo => {
+        formData.append('menu_photos', photo);
+      });
+    }
+
+    const response = await fetch('https://marepe-backend.onrender.com/barraca/update-stand', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Erro ao atualizar barraca no servidor');
+    }
+
+    const data = await response.json();
+
+    await AsyncStorage.setItem(
+      '@local_stand_coords',
+      JSON.stringify({ latitude: Number(latitude), longitude: Number(longitude) })
+    );
+
+    return data;
+  },
+
   registrarBarraca: async (latitude, longitude, establishmentPhotos = [], menuPhotos = []) => {
     const token = await AsyncStorage.getItem('userToken');
 

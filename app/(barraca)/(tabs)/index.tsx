@@ -105,20 +105,21 @@ export default function Mapa() {
     if (!staticLocation) return;
 
     if (hasStand) {
-      // Barraca já existe - apenas atualiza localmente
-      // TODO: Implementar endpoint PATCH para atualizar apenas lat/lng sem exigir fotos
+      setIsUpdating(true);
       setShowConfirmModal(false);
-      await AsyncStorage.setItem('@barraca_location', JSON.stringify(staticLocation));
-      Alert.alert(
-        'Atenção',
-        'Para atualizar a localização da barraca, você precisa ir para o perfil e atualizar os dados completos (incluindo fotos).',
-        [
-          {
-            text: 'Entendi',
-            onPress: () => setIsEditingLocation(false),
-          },
-        ]
-      );
+      try {
+        await barracaService.atualizarBarraca(
+          staticLocation.latitude,
+          staticLocation.longitude
+        );
+        await AsyncStorage.setItem('@barraca_location', JSON.stringify(staticLocation));
+        Alert.alert('Sucesso', 'Localização da barraca atualizada com sucesso!');
+      } catch (error: any) {
+        Alert.alert('Erro', error.message || 'Erro ao atualizar localização.');
+      } finally {
+        setIsUpdating(false);
+        setIsEditingLocation(false);
+      }
     }
     else {
       // Barraca não existe - redireciona para cadastro completo

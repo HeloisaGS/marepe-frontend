@@ -99,10 +99,13 @@ export default function ChatScreen() {
 
       case 'association_closed':
         const closureData = realtimeEvent.payload;
+        setShowCloseModal(false);
         if (closureData.no_charge) {
           showToast(closureData.message || 'Atendimento encerrado', 'info');
-          setTimeout(() => router.replace('/(cliente)/(tabs)'), 3000);
+        } else {
+          showToast('Atendimento encerrado!', 'success');
         }
+        setTimeout(() => router.replace('/(cliente)/(tabs)'), 3000);
         break;
 
       case 'charge_sent':
