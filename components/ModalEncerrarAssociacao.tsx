@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,16 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api';
 import NumericKeypad from './NumericKeypad';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const POLL_INTERVAL = 3000;
 
 interface ModalEncerrarAssociacaoProps {
   visible: boolean;
@@ -20,6 +25,7 @@ interface ModalEncerrarAssociacaoProps {
   customerName: string;
   onClose: () => void;
   onSuccess: () => void;
+  onPaymentConfirmed?: () => void;
 }
 
 export default function ModalEncerrarAssociacao({
@@ -28,11 +34,58 @@ export default function ModalEncerrarAssociacao({
   customerName,
   onClose,
   onSuccess,
+  onPaymentConfirmed,
 }: ModalEncerrarAssociacaoProps) {
   const [chargeAmountCents, setChargeAmountCents] = useState(0);
   const [chargePhoto, setChargePhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [awaitingPayment, setAwaitingPayment] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!awaitingPayment) return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        const { authService } = await import('../services/authService');
+        const response = await authService.getBarracaAssociations();
+        const customers = response.data?.customers || response.data?.associations || [];
+        const association = customers.find(
+          (c: any) => c.association_id === associationId || c.id === associationId
+        );
+        const status = association?.status;
+        if (
+          status === 'closed' ||
+          status === 'paid' ||
+          status === 'confirmado' ||
+          status === 'finalizado' ||
+          status === 'encerrado' ||
+          !association
+        ) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setAwaitingPayment(false);
+          onPaymentConfirmed?.();
+          onClose();
+        }
+      } catch {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      }
+    };
+
+    checkPaymentStatus();
+    pollRef.current = setInterval(checkPaymentStatus, POLL_INTERVAL);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [awaitingPayment]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -143,6 +196,10 @@ export default function ModalEncerrarAssociacao({
   };
 
   const handleClose = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
     resetForm();
     onClose();
   };
@@ -171,62 +228,69 @@ export default function ModalEncerrarAssociacao({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Encerrar associação</Text>
-          <Text style={styles.subtitle}>Cliente: {customerName}</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <Text style={styles.title}>Encerrar associação</Text>
+            <Text style={styles.subtitle}>Cliente: {customerName}</Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Valor do pedido (R$)</Text>
-            <NumericKeypad
-              amountCents={chargeAmountCents}
-              onAmountChange={setChargeAmountCents}
-            />
-          </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Valor do pedido (R$)</Text>
+              <NumericKeypad
+                amountCents={chargeAmountCents}
+                onAmountChange={setChargeAmountCents}
+              />
+            </View>
 
-          <View style={styles.photoContainer}>
-            <Text style={styles.label}>Foto da comanda</Text>
-            {chargePhoto ? (
-              <TouchableOpacity onPress={pickImage}>
-                <Image source={{ uri: chargePhoto }} style={styles.photo} />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
-                <MaterialCommunityIcons name="camera" size={32} color="#E95822" />
-                <Text style={styles.photoButtonText}>Anexar foto</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={handleNoCharge}
-              disabled={loading}
-            >
-              <Text style={styles.buttonSecondaryText}>Não se aplica</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.buttonPrimary,
-                (chargeAmountCents <= 0 || !chargePhoto || loading) && styles.buttonDisabled,
-              ]}
-              onPress={handleConfirm}
-              disabled={chargeAmountCents <= 0 || !chargePhoto || loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
+            <View style={styles.photoContainer}>
+              <Text style={styles.label}>Foto da comanda</Text>
+              {chargePhoto ? (
+                <TouchableOpacity onPress={pickImage}>
+                  <Image source={{ uri: chargePhoto }} style={styles.photo} />
+                </TouchableOpacity>
               ) : (
-                <Text style={styles.buttonPrimaryText}>Confirmar</Text>
+                <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
+                  <MaterialCommunityIcons name="camera" size={32} color="#E95822" />
+                  <Text style={styles.photoButtonText}>Anexar foto</Text>
+                </TouchableOpacity>
               )}
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={handleNoCharge}
+                disabled={loading}
+              >
+                <Text style={styles.buttonSecondaryText}>Não se aplica</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.buttonPrimary,
+                  (chargeAmountCents <= 0 || !chargePhoto || loading) && styles.buttonDisabled,
+                ]}
+                onPress={handleConfirm}
+                disabled={chargeAmountCents <= 0 || !chargePhoto || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.buttonPrimaryText}>Confirmar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} disabled={loading}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose} disabled={loading}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -240,12 +304,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
   container: {
     backgroundColor: '#FFF',
     borderRadius: 20,
     width: '100%',
     maxWidth: 400,
     padding: 24,
+    alignSelf: 'center',
   },
   iconContainer: {
     alignSelf: 'center',
@@ -287,6 +361,7 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: 200,
+    maxHeight: SCREEN_HEIGHT * 0.25,
     borderRadius: 12,
   },
   photoButton: {

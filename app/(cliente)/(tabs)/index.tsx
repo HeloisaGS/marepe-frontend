@@ -124,78 +124,66 @@ export default function Mapa() {
     })();
   }, []);
 
-  // Fetch vendors nearby (mock data for now - replace with API call)
-  // Substitua o useEffect que busca vendedores por este:
-  useEffect(() => {
-    const fetchVendors = async () => {
-  if (!location) return;
+  const refreshVendors = async () => {
+    if (!location) return;
 
-  console.log(`🔎 Buscando vendedores perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+    console.log(`🔎 Buscando vendedores perto de: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
 
-  try {
-    // SOLUÇÃO TEMPORÁRIA: Buscar TODAS as barracas cadastradas
-    // (funciona independente da função RPC do Supabase)
-    const barracasResponse = await api.get('/barraca/get-all-stands');
-    const todasBarracas = barracasResponse.data?.stands || [];
+    try {
+      const barracasResponse = await api.get('/barraca/get-all-stands');
+      const todasBarracas = barracasResponse.data?.stands || [];
 
-    console.log(`📍 Total de barracas cadastradas: ${todasBarracas.length}`);
+      const RADIUS_KM = 2;
+      const nearbyBarracas = todasBarracas.filter((stand: any) => {
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          stand.latitude,
+          stand.longitude
+        );
+        return distance <= RADIUS_KM;
+      });
 
-    // Filtrar barracas próximas (raio de 2km)
-    const RADIUS_KM = 2;
-    const nearbyBarracas = todasBarracas.filter((stand: any) => {
-      const distance = calculateDistance(
-        location.latitude,
-        location.longitude,
-        stand.latitude,
-        stand.longitude
+      const formattedVendors = await Promise.all(
+        nearbyBarracas.map(async (stand: any) => {
+          try {
+            const details = await authService.getEstablishmentDetails(stand.vendor_id);
+            return {
+              id: stand.vendor_id,
+              name: details.data.establishment_name || 'Barraca',
+              type: 'barraca',
+              status: 'online',
+              latitude: Number(stand.latitude),
+              longitude: Number(stand.longitude),
+              categories: [],
+              avatar: details.data.establishment_photos?.[0] || null,
+            };
+          } catch (err) {
+            return {
+              id: stand.vendor_id,
+              name: 'Barraca',
+              type: 'barraca',
+              status: 'online',
+              latitude: Number(stand.latitude),
+              longitude: Number(stand.longitude),
+              categories: [],
+              avatar: null,
+            };
+          }
+        })
       );
-      return distance <= RADIUS_KM;
-    });
 
-    console.log(`📡 Barracas próximas (${RADIUS_KM}km): ${nearbyBarracas.length}`);
+      setVendors(formattedVendors);
+    } catch (err: any) {
+      console.log("❌ [ERRO]:", err.response?.data || err.message);
+    }
+  };
 
-    // Buscar dados detalhados de cada barraca próxima
-    const formattedVendors = await Promise.all(
-      nearbyBarracas.map(async (stand: any) => {
-        try {
-          const details = await authService.getEstablishmentDetails(stand.vendor_id);
-          return {
-            id: stand.vendor_id,
-            name: details.data.establishment_name || 'Barraca',
-            type: 'barraca',
-            status: 'online',
-            latitude: Number(stand.latitude),
-            longitude: Number(stand.longitude),
-            categories: [],
-            avatar: details.data.establishment_photos?.[0] || null,
-          };
-        } catch (err) {
-          console.log(`Erro ao buscar detalhes de ${stand.vendor_id}:`, err);
-          return {
-            id: stand.vendor_id,
-            name: 'Barraca',
-            type: 'barraca',
-            status: 'online',
-            latitude: Number(stand.latitude),
-            longitude: Number(stand.longitude),
-            categories: [],
-            avatar: null,
-          };
-        }
-      })
-    );
-
-    console.log(`✅ Vendedores formatados: ${formattedVendors.length}`);
-    setVendors(formattedVendors);
-  } catch (err: any) {
-    console.log("❌ [ERRO]:", err.response?.data || err.message);
-    console.log("Stack:", err.stack);
-  }
-};
-
+  // Fetch vendors nearby
+  useEffect(() => {
     if (location) {
-      fetchVendors();
-      const interval = setInterval(fetchVendors, 15000); // Atualiza a cada 15s
+      refreshVendors();
+      const interval = setInterval(refreshVendors, 15000);
       return () => clearInterval(interval);
     }
   }, [location]);
@@ -447,55 +435,9 @@ export default function Mapa() {
           vendorId={selectedVendor.id}
           onClose={handleCloseCard}
           onAssociate={() => {
-            // Atualizar lista após associação
-            setShowBarracaSheet(false);
-            setSelectedVendor(null);
             // Recarregar vendedores para pegar novo status
             if (location) {
-              const fetchVendors = async () => {
-                const barracasResponse = await api.get('/barraca/get-all-stands');
-                const todasBarracas = barracasResponse.data?.stands || [];
-                const RADIUS_KM = 2;
-                const nearbyBarracas = todasBarracas.filter((stand: any) => {
-                  const distance = calculateDistance(
-                    location.latitude,
-                    location.longitude,
-                    stand.latitude,
-                    stand.longitude
-                  );
-                  return distance <= RADIUS_KM;
-                });
-                const formattedVendors = await Promise.all(
-                  nearbyBarracas.map(async (stand: any) => {
-                    try {
-                      const details = await authService.getEstablishmentDetails(stand.vendor_id);
-                      return {
-                        id: stand.vendor_id,
-                        name: details.data.establishment_name || 'Barraca',
-                        type: 'barraca',
-                        status: 'online',
-                        latitude: Number(stand.latitude),
-                        longitude: Number(stand.longitude),
-                        categories: [],
-                        avatar: details.data.establishment_photos?.[0] || null,
-                      };
-                    } catch (err) {
-                      return {
-                        id: stand.vendor_id,
-                        name: 'Barraca',
-                        type: 'barraca',
-                        status: 'online',
-                        latitude: Number(stand.latitude),
-                        longitude: Number(stand.longitude),
-                        categories: [],
-                        avatar: null,
-                      };
-                    }
-                  })
-                );
-                setVendors(formattedVendors);
-              };
-              fetchVendors();
+              refreshVendors();
             }
           }}
           onOpenChat={(associationId) => {

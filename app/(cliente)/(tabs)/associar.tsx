@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '../../../services/authService';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface EstablishmentDetails {
   association_id: string;
@@ -25,9 +25,11 @@ export default function Associar() {
   const [loading, setLoading] = useState(true);
   const [disassociating, setDisassociating] = useState(false);
 
-  useEffect(() => {
-    fetchAssociation();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAssociation();
+    }, [])
+  );
 
   const fetchAssociation = async () => {
     try {

@@ -35,7 +35,6 @@ export default function ChatScreen() {
   const [establishmentData, setEstablishmentData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'menu'>('chat');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const [minimized, setMinimized] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'error' as 'error' | 'success' | 'info' });
   const [showCloseModal, setShowCloseModal] = useState(false);
   const closeModalRef = useRef<any>(null);
@@ -194,32 +193,7 @@ export default function ChatScreen() {
     );
   };
 
-  if (minimized) {
-    return (
-      <TouchableOpacity style={styles.minimizedBar} onPress={() => setMinimized(false)}>
-        <MaterialCommunityIcons name="chat" size={20} color="#FFF" />
-        <Text style={styles.minimizedText}>{establishmentData?.establishment_name || 'Chat'}</Text>
-        <Text style={styles.minimizedLabel}>Atendimento ativo</Text>
-      </TouchableOpacity>
-    );
-  }
 
-  // Se minimizado, mostrar apenas barra flutuante
-  if (minimized) {
-    return (
-      <TouchableOpacity
-        style={styles.minimizedBar}
-        onPress={() => setMinimized(false)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.minimizedContent}>
-          <MaterialCommunityIcons name="chat" size={24} color="#FFF" />
-          <Text style={styles.minimizedText}>{establishmentData?.establishment_name || 'Chat'}</Text>
-        </View>
-        <MaterialCommunityIcons name="chevron-up" size={24} color="#FFF" />
-      </TouchableOpacity>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -242,7 +216,7 @@ export default function ChatScreen() {
           <TouchableOpacity style={styles.headerButton} onPress={() => setShowCloseModal(true)}>
             <MaterialCommunityIcons name="close-circle-outline" size={24} color="#E95822" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={() => setMinimized(true)}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.replace('/(cliente)/(tabs)')}>
             <MaterialCommunityIcons name="minus" size={24} color="#666" />
           </TouchableOpacity>
         </View>
@@ -601,39 +575,5 @@ const styles = StyleSheet.create({
   lightboxImage: {
     width: '90%',
     height: '80%',
-  },
-  minimizedBar: {
-    position: 'absolute',
-    bottom: 80,
-    left: 16,
-    right: 16,
-    backgroundColor: '#E95822',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  minimizedContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  minimizedText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFF',
-    flex: 1,
-  },
-  minimizedLabel: {
-    fontSize: 12,
-    color: '#FFE5DC',
   },
 });

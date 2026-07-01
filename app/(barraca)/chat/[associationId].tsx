@@ -34,7 +34,6 @@ export default function VendorChatScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState<string>('Cliente');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const [minimized, setMinimized] = useState(false);
   const [photoQueue, setPhotoQueue] = useState<string[]>([]);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'error' as 'error' | 'success' | 'info' });
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -106,8 +105,9 @@ export default function VendorChatScreen() {
         break;
 
       case 'payment_confirmed':
+        setShowCloseModal(false);
         showToast('Pagamento confirmado!', 'success');
-        setTimeout(() => router.replace('/(barraca)/(tabs)/associados'), 5000);
+        setTimeout(() => router.replace('/(barraca)/(tabs)/associados'), 3000);
         break;
     }
   };
@@ -232,16 +232,6 @@ export default function VendorChatScreen() {
     );
   };
 
-  if (minimized) {
-    return (
-      <TouchableOpacity style={styles.minimizedBar} onPress={() => setMinimized(false)}>
-        <MaterialCommunityIcons name="chat" size={20} color="#FFF" />
-        <Text style={styles.minimizedText}>{customerName}</Text>
-        <Text style={styles.minimizedLabel}>Atendimento ativo</Text>
-      </TouchableOpacity>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -260,7 +250,7 @@ export default function VendorChatScreen() {
           <TouchableOpacity style={styles.headerButton} onPress={() => setShowCloseModal(true)}>
             <MaterialCommunityIcons name="close-circle-outline" size={24} color="#E95822" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={() => setMinimized(true)}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.replace('/(barraca)/(tabs)')}>
             <MaterialCommunityIcons name="minus" size={24} color="#666" />
           </TouchableOpacity>
         </View>
@@ -376,6 +366,11 @@ export default function VendorChatScreen() {
         onSuccess={() => {
           showToast('Aguardando pagamento do cliente...', 'info');
           setShowCloseModal(false);
+        }}
+        onPaymentConfirmed={() => {
+          showToast('Pagamento confirmado!', 'success');
+          setShowCloseModal(false);
+          setTimeout(() => router.replace('/(barraca)/(tabs)/associados'), 3000);
         }}
       />
     </KeyboardAvoidingView>
@@ -541,27 +536,5 @@ const styles = StyleSheet.create({
   lightboxImage: {
     width: '90%',
     height: '80%',
-  },
-  minimizedBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#E95822',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  minimizedText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFF',
-    flex: 1,
-  },
-  minimizedLabel: {
-    fontSize: 12,
-    color: '#FFE5DC',
   },
 });

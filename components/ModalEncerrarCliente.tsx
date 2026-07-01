@@ -9,7 +9,11 @@ import {
   Alert,
   Clipboard,
   Image,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/api';
 
@@ -44,35 +48,52 @@ const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const checkAssociationStatus = async () => {
+    try {
+      const res = await api.get('/cliente/my-association');
+      const data = res.data?.association || res.data?.data || res.data;
+      console.log('📡 Polling associação:', JSON.stringify(data, null, 2));
+
+      const chargeAmount = data?.charge_amount ?? data?.valor_cobranca;
+      const chargePhotoUrl = data?.charge_photo_url ?? data?.foto_comanda;
+      const pixKey = data?.pix_key ?? data?.chave_pix;
+      const status = data?.status;
+      const chargeAmountNumber = chargeAmount ? Number(chargeAmount) : 0;
+
+      if ((status === 'pending_payment' || status === 'aguardando_pagamento') && pixKey) {
+        setChargeData({
+          charge_amount: chargeAmountNumber,
+          charge_photo_url: chargePhotoUrl || '',
+          pix_key: pixKey,
+        });
+        setState('payment');
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+      } else if (status === 'closed' || status === 'encerrado') {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        Alert.alert('Atendimento encerrado', 'O barraqueiro encerrou o atendimento.');
+        handleClose();
+      }
+    } catch {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }
+  };
+
+  // Verificar status atual quando o modal abre
+  useEffect(() => {
+    if (visible && state === 'confirm') {
+      checkAssociationStatus();
+    }
+  }, [visible]);
+
   useEffect(() => {
     if (state === 'waiting') {
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await api.get('/cliente/my-association');
-          const data = res.data;
-          if (data?.status === 'pending_payment' && data.pix_key) {
-            setChargeData({
-              charge_amount: data.charge_amount,
-              charge_photo_url: data.charge_photo_url,
-              pix_key: data.pix_key,
-            });
-            setState('payment');
-            clearInterval(pollRef.current!);
-            pollRef.current = null;
-          } else if (data?.status === 'closed') {
-            clearInterval(pollRef.current!);
-            pollRef.current = null;
-            Alert.alert('Atendimento encerrado', 'O barraqueiro encerrou o atendimento.');
-            handleClose();
-          }
-        } catch {
-          // association not found or error — stop polling
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-        }
-      }, POLL_INTERVAL);
+      checkAssociationStatus();
+      pollRef.current = setInterval(checkAssociationStatus, POLL_INTERVAL);
     }
 
     return () => {
@@ -154,12 +175,19 @@ const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
   };
 
   // Método para receber evento Realtime de cobrança
-  const handleChargeSent = (data: ChargeData) => {
+  const handleChargeSent = (data: any) => {
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-    setChargeData(data);
+    const chargeAmount = data?.charge_amount ?? data?.valor_cobranca ?? 0;
+    const chargePhotoUrl = data?.charge_photo_url ?? data?.foto_comanda ?? '';
+    const pixKey = data?.pix_key ?? data?.chave_pix ?? '';
+    setChargeData({
+      charge_amount: Number(chargeAmount),
+      charge_photo_url: chargePhotoUrl,
+      pix_key: pixKey,
+    });
     setState('payment');
   };
 
@@ -229,39 +257,46 @@ const ModalEncerrarCliente = React.forwardRef<any, ModalEncerrarClienteProps>(({
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={styles.container}>
-            <Text style={styles.title}>Pagamento via Pix</Text>
-            <Text style={styles.amount}>R$ {chargeData.charge_amount.toFixed(2)}</Text>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.container}>
+              <Text style={styles.title}>Pagamento via Pix</Text>
+              <Text style={styles.amount}>R$ {chargeData.charge_amount.toFixed(2)}</Text>
 
-            <View style={styles.photoContainer}>
-              <Text style={styles.label}>Comanda</Text>
-              <TouchableOpacity onPress={() => setSelectedPhoto(chargeData.charge_photo_url)}>
-                <Image source={{ uri: chargeData.charge_photo_url }} style={styles.photo} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.pixContainer}>
-              <Text style={styles.label}>Chave Pix</Text>
-              <View style={styles.pixRow}>
-                <Text style={styles.pixKey}>{chargeData.pix_key}</Text>
-                <TouchableOpacity style={styles.copyButton} onPress={handleCopyPixKey}>
-                  <MaterialCommunityIcons name="content-copy" size={20} color="#E95822" />
+              <View style={styles.photoContainer}>
+                <Text style={styles.label}>Comanda</Text>
+                <TouchableOpacity onPress={() => setSelectedPhoto(chargeData.charge_photo_url)}>
+                  <Image source={{ uri: chargeData.charge_photo_url }} style={styles.photo} />
                 </TouchableOpacity>
               </View>
-            </View>
 
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
-              onPress={handleConfirmPayment}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.buttonPrimaryText}>Confirmar pagamento</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              <View style={styles.pixContainer}>
+                <Text style={styles.label}>Chave Pix</Text>
+                <View style={styles.pixRow}>
+                  <Text style={styles.pixKey}>{chargeData.pix_key}</Text>
+                  <TouchableOpacity style={styles.copyButton} onPress={handleCopyPixKey}>
+                    <MaterialCommunityIcons name="content-copy" size={20} color="#E95822" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.confirmPaymentButton, loading && styles.buttonDisabled]}
+                onPress={handleConfirmPayment}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.confirmPaymentText}>Confirmar pagamento</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Lightbox */}
@@ -292,6 +327,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
   container: {
     backgroundColor: '#FFF',
     borderRadius: 20,
@@ -299,6 +343,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     padding: 24,
     alignItems: 'center',
+    alignSelf: 'center',
   },
   title: {
     fontSize: 20,
@@ -333,6 +378,7 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: 150,
+    maxHeight: SCREEN_HEIGHT * 0.2,
     borderRadius: 12,
   },
   pixContainer: {
@@ -374,6 +420,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  confirmPaymentButton: {
+    backgroundColor: '#E95822',
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  confirmPaymentText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 0.3,
   },
   buttonSecondary: {
     backgroundColor: '#F3F4F6',

@@ -56,7 +56,20 @@ export default function BottomSheetBarraca({
       setLoading(true);
       const { authService } = await import('../services/authService');
       const response = await authService.getEstablishmentDetails(vendorId);
-      setDetails(response.data);
+      const detailsData = response.data;
+
+      // Verificar se o cliente já está associado a esta barraca
+      try {
+        const clientAssociation = await authService.getClientAssociation();
+        if (clientAssociation.data?.vendor_id === vendorId) {
+          detailsData.association_status = 'this';
+          detailsData.association_id = clientAssociation.data.association_id;
+        }
+      } catch {
+        // Sem associação ativa — mantém o status vindo da API
+      }
+
+      setDetails(detailsData);
     } catch (error: any) {
       console.error('Erro ao buscar detalhes do estabelecimento:', error);
       Alert.alert('Erro', 'Não foi possível carregar as informações do estabelecimento');
@@ -144,9 +157,15 @@ export default function BottomSheetBarraca({
     setShowAssociationModal(true);
   };
 
-  const handleAssociationSuccess = () => {
-    // Recarregar detalhes para atualizar status
-    fetchDetails();
+  const handleAssociationSuccess = async (associationId?: string) => {
+    setShowAssociationModal(false);
+    // Atualização otimista: já mostra o botão Chat imediatamente
+    setDetails((prev) => prev ? {
+      ...prev,
+      association_status: 'this',
+      association_id: associationId || prev.association_id || '',
+    } : prev);
+    await fetchDetails();
     onAssociate();
   };
 

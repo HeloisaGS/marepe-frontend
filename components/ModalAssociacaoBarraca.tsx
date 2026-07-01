@@ -16,7 +16,7 @@ interface ModalAssociacaoBarracaProps {
   ownerName: string;
   vendorId: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (associationId?: string) => void;
 }
 
 export default function ModalAssociacaoBarraca({
@@ -33,7 +33,8 @@ export default function ModalAssociacaoBarraca({
     try {
       setLoading(true);
       const { authService } = await import('../services/authService');
-      await authService.createAssociation(vendorId);
+      const response = await authService.createAssociation(vendorId);
+      const associationId = response.data?.association_id || response.data?.id || response.data?.data?.association_id;
 
       Alert.alert(
         'Associação realizada!',
@@ -43,7 +44,7 @@ export default function ModalAssociacaoBarraca({
             text: 'OK',
             onPress: () => {
               onClose();
-              onSuccess();
+              onSuccess(associationId);
             },
           },
         ]
